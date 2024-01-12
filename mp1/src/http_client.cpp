@@ -16,6 +16,8 @@
 #include <iostream>
 #include <fstream>
 
+#include <sys/time.h>
+
 using namespace std;
 
 #define PORT "3490" // the port client will be connecting to 
@@ -40,9 +42,16 @@ int main(int argc, char *argv[])
 	int rv;
 	char s[INET6_ADDRSTRLEN];
     string addr, protocol, host, port, path;
+	
+	FILE *client_timestamp_fp;
 
-	if (argc != 2) {
-	    fprintf(stderr,"usage: client hostname\n");
+	const int MAX_TIMESTAMP_COUNT = 500; // Define the maximum number of timestamps you want to store
+	long long timestamp_array[MAX_TIMESTAMP_COUNT];
+	int timestamp_count = 0;
+
+
+	if (argc != 4) {
+	    fprintf(stderr,"usage: client hostname filename_latency_timestamp filesize\n");
 	    exit(1);
 	}
 
@@ -51,6 +60,11 @@ int main(int argc, char *argv[])
 	hints.ai_socktype = SOCK_STREAM;
     
     addr = argv[1];
+	char *client_file_name = argv[2];
+	long filesize = atoi(argv[3]);
+	long timestamp_filesize = filesize;
+	client_timestamp_fp = fopen(client_file_name, "w");
+
     protocol = addr.substr(0, addr.find("//") - 1);
 	addr = addr.substr(addr.find("//") + 2);
 	if (addr.find('/') == addr.npos) path = "/";
@@ -108,14 +122,20 @@ int main(int argc, char *argv[])
     out.open("output", ios::binary);
     bool header = true;
 	long total_bytes = 0;
+
+	struct timeval current_time;
+	long long microseconds;
+
+
     while (true) {
         memset(buf, '\0', MAXDATASIZE);
         numbytes = recv(sockfd, buf, MAXDATASIZE, 0);
+		buf[numbytes] = '\0';
         if (numbytes > 0) {
 			// cout << numbytes << endl;
 			total_bytes += numbytes;
             if (header) {
-				cout << buf << endl;
+				// cout << buf << endl;
                 char* head = strstr(buf, "\r\n\r\n");
 				// cout << head << endl;
 				if (head != NULL){
@@ -127,10 +147,30 @@ int main(int argc, char *argv[])
 				// printf("numbytes head %d", numbytes);
             } 
 			else out.write(buf, sizeof(char) * numbytes);
+
+			if (total_bytes - 19 >= timestamp_filesize) {
+				// "TIMESTAMP" is in the received message
+				// printf("printing timestamp\n");
+				gettimeofday(&current_time, NULL);
+				microseconds = (long long)current_time.tv_sec * 1000000 + current_time.tv_usec;
+				// fprintf(client_timestamp_fp, "%lld\n", microseconds);
+				// printf("%lld\n", microseconds);
+				timestamp_array[timestamp_count++] = microseconds;
+				timestamp_filesize += filesize;
+			}
         } 
 		else break;
     }
 
+	// gettimeofday(&current_time, NULL);
+	// microseconds = (long long)current_time.tv_sec * 1000000 + current_time.tv_usec;
+	// printf("%lld\n", microseconds);
+	
+
+	for (int i = 0; i < timestamp_count; ++i) {
+		fprintf(client_timestamp_fp, "%lld\n", timestamp_array[i]);
+	}
+	fclose(client_timestamp_fp);
 	out.close(); 
 	printf("total bytes: %ld", total_bytes);
 

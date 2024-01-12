@@ -16,6 +16,7 @@
 #include <signal.h>
 #include <iostream>
 #include <istream>
+#include <time.h>
 
 using namespace std;
 
@@ -53,10 +54,24 @@ int main(int argc, char *argv[])
 	char s[INET6_ADDRSTRLEN];
 	int rv;
 
-	if (argc != 2) {
-	    fprintf(stderr,"usage: server port\n");
+	FILE *server_timestamp_fp;
+	struct timeval current_time;
+	long long microseconds;
+	const int MAX_TIMESTAMP_COUNT = 500; // Define the maximum number of timestamps you want to store
+	long long timestamp_array[MAX_TIMESTAMP_COUNT];
+	int timestamp_count = 0;
+	
+	// const char *timestamp_message = "T";
+
+
+	if (argc != 4) {
+	    fprintf(stderr,"usage: server port server_timestamp_filename n_iterations\n");
 	    exit(1);
 	}
+
+	char *server_file_name = argv[2];
+	int n_iterations = atoi(argv[3]); 				// number of times to send the message
+	server_timestamp_fp = fopen(server_file_name, "w");
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;
@@ -158,7 +173,20 @@ int main(int argc, char *argv[])
 		long total_bytes = 0;	
 
 		memset(buf, '\0', MAXDATASIZE);
+
+		// gettimeofday(&current_time, NULL);
+		// microseconds = (long long)current_time.tv_sec * 1000000 + current_time.tv_usec;
+		// printf("%lld\n", microseconds);
+		
 		while (true) {
+			if (ftell(fp) == 0){
+				gettimeofday(&current_time, NULL);
+				microseconds = (long long)current_time.tv_sec * 1000000 + current_time.tv_usec;
+				// fprintf(server_timestamp_fp, "%lld\n", microseconds);
+				// printf("%lld\n", microseconds);
+				timestamp_array[timestamp_count++] = microseconds;
+			}
+			
 			numbytes = fread(buf, sizeof(char), MAXDATASIZE, fp);
 			if (numbytes > 0) {
 				if (send(new_fd, buf, numbytes, 0) == -1) {
@@ -168,10 +196,26 @@ int main(int argc, char *argv[])
 				memset(buf, '\0', MAXDATASIZE);
 				total_bytes += numbytes;
 			}
-			else break;
+			else {
+				if (n_iterations == 1){
+					// send(new_fd, timestamp_message, strlen(timestamp_message), 0);
+					// printf("sending timestamp \n");
+					break;
+				} else{
+					n_iterations--;
+					fseek(fp, 0, SEEK_SET);
+					// send(new_fd, timestamp_message, strlen(timestamp_message), 0);
+					// printf("sending timestamp \n");
+				}
+			}
 		}
 
 		fclose(fp);
+
+		for (int i = 0; i < timestamp_count; ++i) {
+			fprintf(server_timestamp_fp, "%lld\n", timestamp_array[i]);
+		}
+		fclose(server_timestamp_fp);
 
 		// if (send(new_fd, "Hello, world!", 13, 0) == -1)
 		// 	perror("send");
