@@ -1,12 +1,18 @@
 import numpy as np 
 import pandas as pd 
 
-server_file = "../latency_dl/TCPserver_1MB.csv"
-client_file = "../latency_dl/TCPclient_1MB.csv"
+# server_file = "../latency_dl/TCPserver_1GB.csv"
+# client_file = "../latency_dl/TCPclient_1GB.csv"
+
+server_file = "../latency_dl/TCPserver_1GB_100Mbps.csv"
+client_file = "../latency_dl/TCPclient_1GB_100Mbps.csv"
+
+# server_file = "../latency_dl/TCPserver_1MB.csv"
+# client_file = "../latency_dl/TCPclient_1MB.csv"
 
 # server_file = "../latency_dl/TCPserver_100KB.csv"
 # client_file = "../latency_dl/TCPclient_100KB.csv"
-
+ 
 # server_file = "../latency_dl/TCPserver_10KB.csv"
 # client_file = "../latency_dl/TCPclient_10KB.csv"
 
