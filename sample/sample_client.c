@@ -41,12 +41,23 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <picoquic.h>
 #include <picoquic_utils.h>
 #include <picosocks.h>
 #include <autoqlog.h>
 #include <picoquic_packet_loop.h>
 #include "picoquic_sample.h"
+
+#include <time.h>
+
+#include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
+
+// TODO: Remove this
+#include "picoquic_internal.h"
+
 
  /* Client context and callback management:
   *
@@ -71,6 +82,24 @@
   * The server side callback is a large switch statement, with one entry
   * for each of the call back events.
   */
+
+
+// TODO: Fix this ad-hoc solution
+// File size so that the number of iterations can be counted from the client
+// side. This is instead of using the "TIMESTAMP" string which could be 
+// split between buffers
+// int transfer_filesize = 102400; 
+// // Dynamically incremented after each file/message is received
+// int timestamp_filesize = 102400;
+
+int transfer_filesize = 1048575; 
+int timestamp_filesize = 1048575;
+
+
+long long timestamp_array[500];
+int timestamp_count = 0;
+
+
 
 typedef struct st_sample_client_stream_ctx_t {
     struct st_sample_client_stream_ctx_t* next_stream;
@@ -195,6 +224,18 @@ static void sample_client_free_context(sample_client_ctx_t* client_ctx)
     client_ctx->last_stream = NULL;
 }
 
+bool startsWithTimestamp(uint8_t* bytes) {
+    const char* timestamp = "Timestamp";
+    size_t len = strlen(timestamp);
+
+    for (size_t i = 0; i < len; i++) {
+        if (bytes[i] != (uint8_t)timestamp[i]) {
+            return false;
+        }
+    }
+
+    return true;
+}
 
 int sample_client_callback(picoquic_cnx_t* cnx,
     uint64_t stream_id, uint8_t* bytes, size_t length,
@@ -203,6 +244,14 @@ int sample_client_callback(picoquic_cnx_t* cnx,
     int ret = 0;
     sample_client_ctx_t* client_ctx = (sample_client_ctx_t*)callback_ctx;
     sample_client_stream_ctx_t* stream_ctx = (sample_client_stream_ctx_t*)v_stream_ctx;
+    struct timeval current_time;
+    long long microseconds;
+    
+    
+    // printf("Milind: fin_or_event value: %d\n", (int)fin_or_event);
+    // fflush(stdout); 
+
+
 
     if (client_ctx == NULL) {
         /* This should never happen, because the callback context for the client is initialized 
@@ -213,8 +262,25 @@ int sample_client_callback(picoquic_cnx_t* cnx,
     if (ret == 0) {
         switch (fin_or_event) {
         case picoquic_callback_stream_data:
-        case picoquic_callback_stream_fin:
-            /* Data arrival on stream #x, maybe with fin mark */
+
+            gettimeofday(&current_time, NULL);
+
+            // Calculate the total time in microseconds
+            microseconds = (long long)current_time.tv_sec * 1000000 + current_time.tv_usec; 
+            // client_time_fp = fopen(client_time_file, "a");
+            // if (client_time_fp == NULL) {
+            //     printf("Error opening file!\n");
+            //     exit(1);
+            // }
+
+            if (stream_ctx->bytes_received + length >= timestamp_filesize){
+                // fprintf(client_time_fp, "%lld\n", microseconds);
+                // fflush(client_time_fp);
+                timestamp_array[timestamp_count++] = microseconds;
+                timestamp_filesize += transfer_filesize;
+            }
+            
+
             if (stream_ctx == NULL) {
                 /* This is unexpected, as all contexts were declared when initializing the
                  * connection. */
@@ -231,6 +297,8 @@ int sample_client_callback(picoquic_cnx_t* cnx,
             else
             {
                 if (stream_ctx->F == NULL) {
+                    // printf("Milind line 250, was here, opening file\n");
+                    // fflush(stdout);
                     /* Open the file to receive the data. This is done at the last possible moment,
                      * to minimize the number of files open simultaneously.
                      * When formatting the file_path, verify that the directory name is zero-length,
@@ -265,7 +333,7 @@ int sample_client_callback(picoquic_cnx_t* cnx,
                         }
                     }
                 }
-
+                
                 if (ret == 0 && length > 0) {
                     /* write the received bytes to the file */
                     if (fwrite(bytes, length, 1, stream_ctx->F) != 1) {
@@ -277,8 +345,116 @@ int sample_client_callback(picoquic_cnx_t* cnx,
                         stream_ctx->bytes_received += length;
                     }
                 }
+                // printf("Milind Line 282, was here, nonce \n");
+                // fflush(stdout);
 
                 if (ret == 0 && fin_or_event == picoquic_callback_stream_fin) {
+                    // printf("Milind Line 286, was here , nonce \n");
+                    // fflush(stdout);
+                    stream_ctx->F = picoquic_file_close(stream_ctx->F);
+                    stream_ctx->is_stream_finished = 1;
+                    client_ctx->nb_files_received++;
+
+                    if ((client_ctx->nb_files_received + client_ctx->nb_files_failed) >= client_ctx->nb_files) {
+                        /* everything is done, close the connection */
+                        ret = picoquic_close(cnx, 0);
+                    }
+                }
+            }
+            break;
+        case picoquic_callback_stream_fin:
+            /* Data arrival on stream #x, maybe with fin mark */
+            // Get the current time in microseconds
+            gettimeofday(&current_time, NULL);
+
+            // Calculate the total time in microseconds
+            microseconds = (long long)current_time.tv_sec * 1000000 + current_time.tv_usec; 
+            // client_time_fp = fopen(client_time_file, "a");
+            // if (client_time_fp == NULL) {
+            //     printf("Error opening file!\n");
+            //     exit(1);
+            // }
+
+            // if (startsWithTimestamp(bytes)){
+            // Fin always corresponds to the last packet of the last message
+            // Hence timestamp is always written for fin
+            // fprintf(client_time_fp, "%lld\n", microseconds);
+            timestamp_array[timestamp_count++] = microseconds;
+            // fflush(client_time_fp);
+            // }
+            
+
+            if (stream_ctx == NULL) {
+                /* This is unexpected, as all contexts were declared when initializing the
+                 * connection. */
+                return -1;
+            }
+            else if (!stream_ctx->is_name_sent) {
+                /* Unexpected: should not receive data before sending the file name to the server */
+                return -1;
+            }
+            else if (stream_ctx->is_stream_reset || stream_ctx->is_stream_finished) {
+                /* Unexpected: receive after fin */
+                return -1;
+            }
+            else
+            {
+                if (stream_ctx->F == NULL) {
+                    // printf("Milind line 250, was here, opening file\n");
+                    // fflush(stdout);
+                    /* Open the file to receive the data. This is done at the last possible moment,
+                     * to minimize the number of files open simultaneously.
+                     * When formatting the file_path, verify that the directory name is zero-length,
+                     * or terminated by a proper file separator.
+                     */
+                    char file_path[1024];
+                    size_t dir_len = strlen(client_ctx->default_dir);
+                    size_t file_name_len = strlen(client_ctx->file_names[stream_ctx->file_rank]);
+
+                    if (dir_len > 0 && dir_len < sizeof(file_path)) {
+                        memcpy(file_path, client_ctx->default_dir, dir_len);
+                        if (file_path[dir_len - 1] != PICOQUIC_FILE_SEPARATOR[0]) {
+                            file_path[dir_len] = PICOQUIC_FILE_SEPARATOR[0];
+                            dir_len++;
+                        }
+                    }
+
+                    if (dir_len + file_name_len + 1 >= sizeof(file_path)) {
+                        /* Unexpected: could not format the file name */
+                        fprintf(stderr, "Could not format the file path.\n");
+                        ret = -1;
+                    } else {
+                        memcpy(file_path + dir_len, client_ctx->file_names[stream_ctx->file_rank],
+                            file_name_len);
+                        file_path[dir_len + file_name_len] = 0;
+                        stream_ctx->F = picoquic_file_open(file_path, "wb");
+
+                        if (stream_ctx->F == NULL) {
+                            /* Could not open the file */
+                            fprintf(stderr, "Could not open the file: %s\n", file_path);
+                            ret = -1;
+                        }
+                    }
+                }
+                
+                if (ret == 0 && length > 0) {
+                    /* write the received bytes to the file */
+                    if (fwrite(bytes, length, 1, stream_ctx->F) != 1) {
+                        /* Could not write file to disk */
+                        fprintf(stderr, "Could not write data to disk.\n");
+                        ret = -1;
+                    }
+                    else {
+                        stream_ctx->bytes_received += length;
+                    }
+                }
+                // printf("Milind Line 429, was here, nonce: %lld\n", microseconds);
+                // fflush(stdout);
+
+                if (ret == 0 && fin_or_event == picoquic_callback_stream_fin) {
+                    // printf("Milind Line 433, was here , nonce: %lld \n", microseconds);
+                    // // printf("Milind Total bytes received: %zu \n", stream_ctx->bytes_received);
+                    // fflush(stdout);
                     stream_ctx->F = picoquic_file_close(stream_ctx->F);
                     stream_ctx->is_stream_finished = 1;
                     client_ctx->nb_files_received++;
@@ -349,6 +525,8 @@ int sample_client_callback(picoquic_cnx_t* cnx,
                 /* Decidedly unexpected */
                 return -1;
             } else if (stream_ctx->name_sent_length < stream_ctx->name_length){
+                // printf("Milind line 352 variables: %ld, %ld \n", stream_ctx->name_sent_length,stream_ctx->name_length);
+                // fflush(stdout);
                 uint8_t* buffer;
                 size_t available = stream_ctx->name_length - stream_ctx->name_sent_length;
                 int is_fin = 1;
@@ -364,12 +542,17 @@ int sample_client_callback(picoquic_cnx_t* cnx,
                 buffer = picoquic_provide_stream_data_buffer(bytes, available, is_fin, !is_fin);
                 if (buffer != NULL) {
                     char const* filename = client_ctx->file_names[stream_ctx->file_rank];
+                    // printf("\n %s filename, line 369 \n \n", filename);
+                    // fflush(stdout);
+
                     memcpy(buffer, filename + stream_ctx->name_sent_length, available);
                     stream_ctx->name_sent_length += available;
                     stream_ctx->is_name_sent = is_fin;
                 }
                 else {
                     ret = -1;
+                    // printf("Milind: null return send option, line 531 \n");
+                    // fflush(stdout);
                 }
             }
             else {
@@ -471,6 +654,9 @@ int picoquic_sample_client(char const * server_name, int server_port, char const
         }
     }
 
+    // printf("Milind %s sni \n", sni);
+    // fflush(stdout);
+
     /* Create a QUIC context. It could be used for many connections, but in this sample we
      * will use it for just one connection. 
      * The sample code exercises just a small subset of the QUIC context configuration options:
@@ -498,7 +684,9 @@ int picoquic_sample_client(char const * server_name, int server_port, char const
             picoquic_set_key_log_file_from_env(quic);
             picoquic_set_qlog(quic, qlog_dir);
             picoquic_set_log_level(quic, 1);
+            picoquic_set_default_idle_timeout(quic, 75*1000);
         }
+        
     }
 
     /* Initialize the callback context and create the connection context.
@@ -516,6 +704,10 @@ int picoquic_sample_client(char const * server_name, int server_port, char const
         /* Create a client connection */
         cnx = picoquic_create_cnx(quic, picoquic_null_connection_id, picoquic_null_connection_id,
             (struct sockaddr*) & server_address, current_time, 0, sni, PICOQUIC_SAMPLE_ALPN, 1);
+
+
+        printf("%ld, keep_alive interval \n", cnx->keep_alive_interval);
+        printf("%ld, idle_timeout \n", cnx->idle_timeout);
 
         if (cnx == NULL) {
             fprintf(stderr, "Could not create connection context\n");
@@ -568,6 +760,22 @@ int picoquic_sample_client(char const * server_name, int server_port, char const
 
     /* Free the Client context */
     sample_client_free_context(&client_ctx);
+
+    // Write timestamps to file
+
+    const char* client_timestamp_file = "client_timestamps.csv";
+    FILE* client_timestamp_fp;
+
+    client_timestamp_fp = fopen(client_timestamp_file, "a");
+    if (client_timestamp_fp == NULL) {
+        printf("Error opening file!\n");
+        exit(1);
+    }
+
+    for (int i = 0; i < timestamp_count; ++i) {
+		fprintf(client_timestamp_fp, "%lld\n", timestamp_array[i]);
+	}
+	fclose(client_timestamp_fp);
 
     return ret;
 }
