@@ -47,6 +47,8 @@
 #include <autoqlog.h>
 #include "picoquic_sample.h"
 #include "picoquic_packet_loop.h"
+#include <sys/time.h>
+#include <unistd.h>
 
 /* Server context and callback management:
  *
@@ -67,6 +69,11 @@
  * The server side callback is a large switch statement, with one entry
  * for each of the call back events.
  */
+
+
+int n_iterations = 25;
+int n_next = 25;
+int time_to_stall = 0;
 
 typedef struct st_sample_server_stream_ctx_t {
     struct st_sample_server_stream_ctx_t* next_stream;
@@ -212,6 +219,10 @@ int sample_server_callback(picoquic_cnx_t* cnx,
     sample_server_ctx_t* server_ctx = (sample_server_ctx_t*)callback_ctx;
     sample_server_stream_ctx_t* stream_ctx = (sample_server_stream_ctx_t*)v_stream_ctx;
 
+    
+   
+
+
     /* If this is the first reference to the connection, the application context is set
      * to the default value defined for the server. This default value contains the pointer
      * to the file directory in which all files are defined.
@@ -222,11 +233,16 @@ int sample_server_callback(picoquic_cnx_t* cnx,
             /* cannot handle the connection */
             picoquic_close(cnx, PICOQUIC_ERROR_MEMORY);
             return -1;
+
+            // printf("Milind Line 229, was here: server_ctx == NULL \n");
+            // fflush(stdout);
         }
         else {
             sample_server_ctx_t* d_ctx = (sample_server_ctx_t*)picoquic_get_default_callback_context(picoquic_get_quic_ctx(cnx));
             if (d_ctx != NULL) {
                 memcpy(server_ctx, d_ctx, sizeof(sample_server_ctx_t));
+                // printf("Milind Line 238, was here: server_ctx not NULL \n");
+                // fflush(stdout);
             }
             else {
                 /* This really is an error case: the default connection context should never be NULL */
@@ -241,6 +257,8 @@ int sample_server_callback(picoquic_cnx_t* cnx,
         switch (fin_or_event) {
         case picoquic_callback_stream_data:
         case picoquic_callback_stream_fin:
+            // printf("Milind: fin case \n");
+            // fflush(stdout);
             /* Data arrival on stream #x, maybe with fin mark */
             if (stream_ctx == NULL) {
                 /* Create and initialize stream context */
@@ -264,7 +282,8 @@ int sample_server_callback(picoquic_cnx_t* cnx,
             else {
                 /* Accumulate data */
                 size_t available = sizeof(stream_ctx->file_name) - stream_ctx->name_length - 1;
-
+                // printf("Milind: %ld available fin case line 269 \n", available);
+                // fflush(stdout); 
                 if (length > available) {
                     /* Name too long: reset stream! */
                     sample_server_delete_stream_context(server_ctx, stream_ctx);
@@ -297,6 +316,10 @@ int sample_server_callback(picoquic_cnx_t* cnx,
             }
             break;
         case picoquic_callback_prepare_to_send:
+            if (time_to_stall == 1){
+                // sleep(2);
+                time_to_stall = 0;
+            }
             /* Active sending API */
             if (stream_ctx == NULL) {
                 /* This should never happen */
@@ -307,17 +330,73 @@ int sample_server_callback(picoquic_cnx_t* cnx,
             else {
                 /* Implement the zero copy callback */
                 size_t available = stream_ctx->file_length - stream_ctx->file_sent;
+                // printf("Milind: %ld available %ld length \n", available, length);
+                // fflush(stdout);
                 int is_fin = 1;
                 uint8_t* buffer;
+                const uint8_t* substitute = (const uint8_t*)"Timestamp \n";
+                int is_fin_dummy = 0;
 
                 if (available > length) {
                     available = length;
                     is_fin = 0;
+                } 
+
+                // printf("Milind Line 323 \n");  
+                // fflush(stdout);
+                if (n_iterations == 1){
+                    is_fin_dummy = is_fin; // comment this line out to enable infinite sending
                 }
-                
-                buffer = picoquic_provide_stream_data_buffer(bytes, available, is_fin, !is_fin);
+
+                buffer = picoquic_provide_stream_data_buffer(bytes, available, is_fin_dummy, !is_fin_dummy);
                 if (buffer != NULL) {
+                    
+                    
+                    const char* server_time_file = "server_timestamps.csv"; 
+                    FILE* server_time_fp = fopen(server_time_file, "a");
+                    if (server_time_fp == NULL) {
+                        printf("Error opening file!\n");
+                        exit(1);
+                    }
+
+                    // Get the current time in microseconds
+                    
+                    struct timeval current_time;
+                    long long microseconds;
+                    gettimeofday(&current_time, NULL);
+                    // Calculate the total time in microseconds
+                    microseconds = (long long)current_time.tv_sec * 1000000 + current_time.tv_usec;
+                    
+                    if (n_next == n_iterations){
+                        fprintf(server_time_fp, "%lld\n", microseconds);
+                        fflush(server_time_fp);
+                        n_next = n_next - 1;
+                    }
+
+                    
+                    // Actual picoquic operation
                     size_t nb_read = fread(buffer, 1, available, stream_ctx->F);
+                    
+                    
+                    fclose(server_time_fp);
+                    
+                    // char tempBuffer[10];
+
+                    // // Use snprintf with the temporary buffer
+                    // snprintf(tempBuffer, sizeof(tempBuffer), "%s\n", substitute);
+
+                    // // Copy the contents of tempBuffer back to the original buffer
+                    // size_t tempBufferLen = strlen(tempBuffer);
+                    // if (tempBufferLen < available) {
+                    //     memcpy(buffer, tempBuffer, tempBufferLen + 1); // Include the null terminator
+                    // }
+                    if (is_fin == 1){
+                        memcpy(buffer, substitute, strlen((const char*)substitute) + 1);
+                    }
+                    
+                    
+                    // printf("Milind: line 326: nb_read: %ld \n", nb_read);
+                    // fflush(stdout);
 
                     if (nb_read != available) {
                         /* Error while reading the file */
@@ -326,6 +405,18 @@ int sample_server_callback(picoquic_cnx_t* cnx,
                     }
                     else {
                         stream_ctx->file_sent += available;
+                        // Uncomment below codeblock for sending n_iterations times
+                        if (is_fin == 1){
+                            // printf("Milind line 358: is_fin: %d \n", is_fin);
+                            // fflush(stdout);
+                            stream_ctx->file_sent = 0;
+                            fseek(stream_ctx->F, 0, SEEK_SET);
+                            n_iterations--;
+                            time_to_stall = 1;
+                            // interval between successive message transfers
+                            // printf("Milind line 362: n_iterations: %d \n", n_iterations);
+                            
+                        }
                     }
                 }
                 else {
@@ -348,6 +439,8 @@ int sample_server_callback(picoquic_cnx_t* cnx,
             /* Delete the server application context */
             sample_server_delete_context(server_ctx);
             picoquic_set_callback(cnx, NULL, NULL);
+            // printf("Milind line 356: closing the application \n");
+            // fflush(stdout);
             break;
         case picoquic_callback_version_negotiation:
             /* The server should never receive a version negotiation response */
@@ -393,7 +486,7 @@ int picoquic_sample_server(int server_port, const char* server_cert, const char*
     default_context.default_dir_len = strlen(default_dir);
 
     printf("Starting Picoquic Sample server on port %d\n", server_port);
-    printf("Hello!");
+    // printf("Hello!");
 
     /* Create the QUIC context for the server */
     current_time = picoquic_current_time();
@@ -415,6 +508,8 @@ int picoquic_sample_server(int server_port, const char* server_cert, const char*
         picoquic_set_log_level(quic, 1);
 
         picoquic_set_key_log_file_from_env(quic);
+
+        picoquic_set_default_idle_timeout(quic, 75*1000);
     }
 
     /* Wait for packets using the wait loop provided in the library.
