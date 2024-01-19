@@ -75,6 +75,9 @@ int n_iterations = 25;
 int n_next = 25;
 int time_to_stall = 0;
 
+long long timestamp_array_server[500];
+int timestamp_count_server = 0;
+
 typedef struct st_sample_server_stream_ctx_t {
     struct st_sample_server_stream_ctx_t* next_stream;
     struct st_sample_server_stream_ctx_t* previous_stream;
@@ -352,12 +355,12 @@ int sample_server_callback(picoquic_cnx_t* cnx,
                 if (buffer != NULL) {
                     
                     
-                    const char* server_time_file = "server_timestamps.csv"; 
-                    FILE* server_time_fp = fopen(server_time_file, "a");
-                    if (server_time_fp == NULL) {
-                        printf("Error opening file!\n");
-                        exit(1);
-                    }
+                    // const char* server_time_file = "server_timestamps.csv"; 
+                    // FILE* server_time_fp = fopen(server_time_file, "a");
+                    // if (server_time_fp == NULL) {
+                    //     printf("Error opening file!\n");
+                    //     exit(1);
+                    // }
 
                     // Get the current time in microseconds
                     
@@ -368,8 +371,9 @@ int sample_server_callback(picoquic_cnx_t* cnx,
                     microseconds = (long long)current_time.tv_sec * 1000000 + current_time.tv_usec;
                     
                     if (n_next == n_iterations){
-                        fprintf(server_time_fp, "%lld\n", microseconds);
-                        fflush(server_time_fp);
+                        // fprintf(server_time_fp, "%lld\n", microseconds);
+                        // fflush(server_time_fp);
+                        timestamp_array_server[timestamp_count_server++] = microseconds;
                         n_next = n_next - 1;
                     }
 
@@ -378,7 +382,7 @@ int sample_server_callback(picoquic_cnx_t* cnx,
                     size_t nb_read = fread(buffer, 1, available, stream_ctx->F);
                     
                     
-                    fclose(server_time_fp);
+                    
                     
                     // char tempBuffer[10];
 
@@ -415,7 +419,19 @@ int sample_server_callback(picoquic_cnx_t* cnx,
                             time_to_stall = 1;
                             // interval between successive message transfers
                             // printf("Milind line 362: n_iterations: %d \n", n_iterations);
-                            
+                            if (n_iterations == 0){
+                                const char* server_time_file = "server_timestamps.csv"; 
+                                FILE* server_time_fp = fopen(server_time_file, "w");
+                                if (server_time_fp == NULL) {
+                                    printf("Error opening file!\n");
+                                    exit(1);
+                                }
+                                
+                                for (int i = 0; i < timestamp_count_server; ++i) {
+                                    fprintf(server_time_fp, "%lld\n", timestamp_array_server[i]);
+                                }
+                                fclose(server_time_fp);
+                            }
                         }
                     }
                 }

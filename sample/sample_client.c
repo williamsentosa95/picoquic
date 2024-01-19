@@ -92,8 +92,14 @@
 // // Dynamically incremented after each file/message is received
 // int timestamp_filesize = 102400;
 
-int transfer_filesize = 1048575; 
-int timestamp_filesize = 1048575;
+// int transfer_filesize = 1048575; 
+// int timestamp_filesize = 1048575;
+
+// int transfer_filesize = 102400;
+// int timestamp_filesize = 102400;
+
+int transfer_filesize = 10240;
+int timestamp_filesize = 10240;
 
 
 long long timestamp_array[500];
@@ -766,7 +772,7 @@ int picoquic_sample_client(char const * server_name, int server_port, char const
     const char* client_timestamp_file = "client_timestamps.csv";
     FILE* client_timestamp_fp;
 
-    client_timestamp_fp = fopen(client_timestamp_file, "a");
+    client_timestamp_fp = fopen(client_timestamp_file, "w");
     if (client_timestamp_fp == NULL) {
         printf("Error opening file!\n");
         exit(1);
