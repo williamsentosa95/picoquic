@@ -25,6 +25,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+
+// Milind's includes
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <stdio.h>
 /*
  * Sending logic.
  *
@@ -3958,6 +3963,36 @@ int picoquic_prepare_segment(picoquic_cnx_t* cnx, picoquic_path_t* path_x, picoq
     return ret;
 }
 
+void print_address_from_path(struct sockaddr_storage *addr_storage) {
+
+    // Function to print the peer address from paths in the choose next path for
+    // Multipath function below
+
+    char ip_str[INET6_ADDRSTRLEN]; // Buffer to store the IP address
+    int port;
+
+    // Check if the address is IPv4
+    if (addr_storage->ss_family == AF_INET) {
+        struct sockaddr_in *addr_in = (struct sockaddr_in *)addr_storage;
+        inet_ntop(AF_INET, &addr_in->sin_addr, ip_str, sizeof(ip_str));
+        port = ntohs(addr_in->sin_port);
+    }
+    // Check if the address is IPv6
+    else if (addr_storage->ss_family == AF_INET6) {
+        struct sockaddr_in6 *addr_in6 = (struct sockaddr_in6 *)addr_storage;
+        inet_ntop(AF_INET6, &addr_in6->sin6_addr, ip_str, sizeof(ip_str));
+        port = ntohs(addr_in6->sin6_port);
+    } else {
+        printf("Unknown AF\n");
+        return;
+    }
+
+    printf("Milind IP address: %s\n", ip_str);
+    printf("Milind Port: %d\n", port);
+}
+
+
+
 /*
  * The version 1 of Quic only supports path migration, not full multipath.
  * This code finds whether there is a path being probed that could become the
@@ -4051,15 +4086,23 @@ static int picoquic_select_next_path_mp(picoquic_cnx_t* cnx, uint64_t current_ti
     }
 
     for (i = 0; i < cnx->nb_paths; i++) {
+        // printf("Milind path id: %d \n", i);
+        // fflush(stdout);
         int path_priority = (cnx->path[i]->path_is_standby) ? 0 : 1;
         if (cnx->path[i]->nb_retransmit > 0) {
             path_priority = 0;
         }
         cnx->path[i]->is_nominal_ack_path = 0;
         if (cnx->path[i]->path_is_demoted) {
+            // In the 100KB multipath case, this doesn't seem to occur
+            printf("Milind Path is demoted \n");
+            fflush(stdout);
             continue;
         }
         else if (cnx->path[i]->challenge_failed) {
+            // In the 100KB multipath case, this doesn't seem to occur
+            printf("Milind Path challenge failed \n");
+            fflush(stdout);
             picoquic_demote_path(cnx, i, current_time);
             continue;
         }
@@ -4179,12 +4222,18 @@ static int picoquic_select_next_path_mp(picoquic_cnx_t* cnx, uint64_t current_ti
     }
 
     if (challenge_path >= 0) {
+        printf("Milind challenge path \n");
+        fflush(stdout);
         path_id = challenge_path;
     }
     else if (is_ack_needed && is_min_rtt_pacing_ok) {
+        printf("Milind ACK path \n");
+        fflush(stdout);
         path_id = i_min_rtt;
     }
     else if (data_path_cwin >= 0) {
+        printf("Milind CWIN path \n");
+        fflush(stdout);
         /* if there is a path ready to send the most urgent data, select it */
         if (affinity_path_id >= 0) {
             path_id = affinity_path_id;
@@ -4194,9 +4243,13 @@ static int picoquic_select_next_path_mp(picoquic_cnx_t* cnx, uint64_t current_ti
         }
     }
     else if (data_path_pacing >= 0) {
+        printf("Milind pacing path \n");
+        fflush(stdout);
         path_id = data_path_pacing;
     }
     else {
+        printf("Milind wake time path \n");
+        fflush(stdout);
         uint64_t path_wake_time = pacing_time_next;
         if (challenge_time_next < path_wake_time) {
             path_wake_time = challenge_time_next;
@@ -4209,6 +4262,14 @@ static int picoquic_select_next_path_mp(picoquic_cnx_t* cnx, uint64_t current_ti
     }
 
     cnx->path[path_id]->selected++;
+
+    printf("Milind returned path_id: %d \n", path_id);
+    printf("Peer path address");
+    print_address_from_path(&cnx->path[path_id]->peer_addr);
+    printf("Local path address");
+    print_address_from_path(&cnx->path[path_id]->local_addr);
+    printf("\n \n");
+    fflush(stdout);
 
     return path_id;
 }
