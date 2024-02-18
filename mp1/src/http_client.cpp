@@ -45,13 +45,15 @@ int main(int argc, char *argv[])
 	
 	FILE *client_timestamp_fp;
 
-	const int MAX_TIMESTAMP_COUNT = 500; // Define the maximum number of timestamps you want to store
+	const int MAX_TIMESTAMP_COUNT = 100000; // Define the maximum number of timestamps you want to store
 	long long timestamp_array[MAX_TIMESTAMP_COUNT];
 	int timestamp_count = 0;
 
+	int sleep_time = 10000; // sleep time in microseconds
 
-	if (argc != 4) {
-	    fprintf(stderr,"usage: client hostname filename_latency_timestamp filesize\n");
+
+	if (argc != 5) {
+	    fprintf(stderr,"usage: client hostname filename_latency_timestamp filesize n_iterations\n");
 	    exit(1);
 	}
 
@@ -62,6 +64,7 @@ int main(int argc, char *argv[])
     addr = argv[1];
 	char *client_file_name = argv[2];
 	long filesize = atoi(argv[3]);
+	int n_iterations = atoi(argv[4]);
 	long timestamp_filesize = filesize;
 	client_timestamp_fp = fopen(client_file_name, "w");
 
@@ -116,51 +119,64 @@ int main(int argc, char *argv[])
 	  				 "Host: " + host + ":" + port + "\r\n" + "Connection: Keep-Alive\r\n\r\n";
 
 
-	send(sockfd, request.c_str(), request.size(), 0);
-
 	ofstream out;
-    out.open("output", ios::binary);
-    bool header = true;
+	out.open("output", ios::binary);
 	long total_bytes = 0;
 
-	struct timeval current_time;
-	long long microseconds;
+	for (int j = 0; j < n_iterations; ++j) {
+		usleep(sleep_time);
+		struct timeval current_time;
+		long long microseconds;
+
+		send(sockfd, request.c_str(), request.size(), 0);
+		gettimeofday(&current_time, NULL);
+		microseconds = (long long)current_time.tv_sec * 1000000 + current_time.tv_usec;
+		timestamp_array[timestamp_count++] = microseconds;
 
 
-    while (true) {
-        memset(buf, '\0', MAXDATASIZE);
-        numbytes = recv(sockfd, buf, MAXDATASIZE, 0);
-		buf[numbytes] = '\0';
-        if (numbytes > 0) {
-			// cout << numbytes << endl;
-			total_bytes += numbytes;
-            if (header) {
-				// cout << buf << endl;
-                char* head = strstr(buf, "\r\n\r\n");
-				// cout << head << endl;
-				if (head != NULL){
-					head+=4;
-					header = false;
-				}
-                out.write(head, numbytes - 19);
-				// printf("strlen(head): %ld", strlen(head) );
-				// printf("numbytes head %d", numbytes);
-            } 
-			else out.write(buf, sizeof(char) * numbytes);
+		bool header = true;
+		
+		// printf("total bytes: %ld", total_bytes);
+		
 
-			if (total_bytes - 19 >= timestamp_filesize) {
-				// "TIMESTAMP" is in the received message
-				// printf("printing timestamp\n");
-				gettimeofday(&current_time, NULL);
-				microseconds = (long long)current_time.tv_sec * 1000000 + current_time.tv_usec;
-				// fprintf(client_timestamp_fp, "%lld\n", microseconds);
-				// printf("%lld\n", microseconds);
-				timestamp_array[timestamp_count++] = microseconds;
-				timestamp_filesize += filesize;
-			}
-        } 
-		else break;
-    }
+
+		while (true) {
+			memset(buf, '\0', MAXDATASIZE);
+			numbytes = recv(sockfd, buf, MAXDATASIZE, 0);
+			buf[numbytes] = '\0';
+			if (numbytes > 0) {
+				// cout << numbytes << endl;
+				total_bytes += numbytes;
+				if (header) {
+					// cout << buf << endl;
+					char* head = strstr(buf, "\r\n\r\n");
+					// cout << head << endl;
+					if (head != NULL){
+						head+=4;
+						header = false;
+					}
+					out.write(head, numbytes - 19);
+					// printf("strlen(head): %ld", strlen(head) );
+					// printf("numbytes head %d", numbytes);
+				} 
+				else out.write(buf, sizeof(char) * numbytes);
+
+				if (total_bytes - 19 >= timestamp_filesize) {
+					// "TIMESTAMP" is in the received message
+					// printf("printing timestamp\n");
+					gettimeofday(&current_time, NULL);
+					microseconds = (long long)current_time.tv_sec * 1000000 + current_time.tv_usec;
+					timestamp_array[timestamp_count++] = microseconds;
+					timestamp_filesize += filesize;
+					printf("total bytes: %ld \n", total_bytes);
+					// printf("j: %d\n \n", j);
+					fflush(stdout);
+					break;
+				} 
+			} 
+			else break;
+		}
+	}
 
 	// gettimeofday(&current_time, NULL);
 	// microseconds = (long long)current_time.tv_sec * 1000000 + current_time.tv_usec;
@@ -168,22 +184,27 @@ int main(int argc, char *argv[])
 	
 
 	for (int i = 0; i < timestamp_count; ++i) {
+		// if i is even, then print "start time" before the timestamp and if i is odd, then print 
+		// "end time" before the timestamp
+		if (i % 2 == 0) fprintf(client_timestamp_fp, "start time: ");
+		else fprintf(client_timestamp_fp, "end time: ");
 		fprintf(client_timestamp_fp, "%lld\n", timestamp_array[i]);
 	}
 	fclose(client_timestamp_fp);
-	out.close(); 
+	
 	printf("total bytes: %ld", total_bytes);
 
-	if ((numbytes = recv(sockfd, buf, MAXDATASIZE-1, 0)) == -1) {
-	    perror("recv");
-	    exit(1);
-	}
+	// if ((numbytes = recv(sockfd, buf, MAXDATASIZE-1, 0)) == -1) {
+	//     perror("recv");
+	//     exit(1);
+	// }
+	close(sockfd);
 
 	// buf[numbytes] = '\0';
 
 	// printf("client: received '%s'\n",buf);
 
-	close(sockfd);
+	// out.close(); 
 
 	return 0;
 }
