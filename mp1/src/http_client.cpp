@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
 					auto end = std::chrono::high_resolution_clock::now();
 					timestamp_array[timestamp_count++] = std::chrono::duration<double, std::micro>(end - start).count();
 					timestamp_filesize += filesize;
-					printf("total bytes: %ld \n", total_bytes);
+					// printf("total bytes: %ld \n", total_bytes);
 					// printf("j: %d\n \n", j);
 					fflush(stdout);
 					break;
