@@ -122,6 +122,13 @@ int main(int argc, char *argv[])
 
 	char buf[MAXDATASIZE];
 	FILE *fp;
+	int SIZE = 1048575; // 1MB
+	char data_in_memory[SIZE];
+	for (int i = 0; i < SIZE; i++) {
+        data_in_memory[i] = 'a'; // Example filler data
+    }
+
+
 
 	while(1) {  // main accept() loop
 		sin_size = sizeof their_addr;
@@ -144,6 +151,7 @@ int main(int argc, char *argv[])
 		while (true){
 
 			int recv_value = recv(new_fd, buf, MAXDATASIZE, 0);
+			int offset = 0;
 			if (recv_value == 0) break;
 
 			string new_buf(buf);
@@ -176,19 +184,35 @@ int main(int argc, char *argv[])
 			// microseconds = (long long)current_time.tv_sec * 1000000 + current_time.tv_usec;
 			// printf("%lld\n", microseconds);
 			
-			while (true) {
+			// while (true) {
 				
-				numbytes = fread(buf, sizeof(char), MAXDATASIZE, fp);
-				if (numbytes > 0) {
-					if (send(new_fd, buf, numbytes, 0) == -1) {
-						perror("send");
-						exit(1);
-					}	
-					memset(buf, '\0', MAXDATASIZE);
-					total_bytes += numbytes;
-				}
-				else break;
+			// 	numbytes = fread(buf, sizeof(char), MAXDATASIZE, fp);
+			// 	if (numbytes > 0) {
+			// 		if (send(new_fd, buf, numbytes, 0) == -1) {
+			// 			perror("send");
+			// 			exit(1);
+			// 		}	
+			// 		memset(buf, '\0', MAXDATASIZE);
+			// 		total_bytes += numbytes;
+			// 	}
+			// 	else break;
+			// }
+
+			while (offset < SIZE) {
+			// Calculate the number of bytes to send in this chunk
+			int bytes_to_send = (SIZE - offset > MAXDATASIZE) ? MAXDATASIZE : (SIZE - offset);
+			
+			// Send the data in chunks of MAXDATASIZE
+			numbytes = send(new_fd, data_in_memory + offset, bytes_to_send, 0);
+			if (numbytes == -1) {
+				perror("send");
+				exit(1);
 			}
+
+			
+			offset += numbytes; // Move the offset forward
+			total_bytes += numbytes; // Accumulate the total bytes sent
+		}
 
 			fclose(fp);
 		}
