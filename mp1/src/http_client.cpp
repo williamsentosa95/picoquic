@@ -17,6 +17,8 @@
 #include <fstream>
 
 #include <sys/time.h>
+#include <chrono>
+
 
 using namespace std;
 
@@ -109,18 +111,21 @@ int main(int argc, char *argv[])
 
 	inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr),
 			s, sizeof s);
+	
+	// TODO: Remove this
 	printf("client: connecting to %s\n", s);
 
 	freeaddrinfo(servinfo); // all done with this structure
 	
+	// TODO: Remove this
 	cout << host << ' ' << port << ' ' << path << endl;
 	
     string request = "GET " + path + " HTTP/1.1\r\n" + "User-Agent: Wget/1.12(linux-gnu)\r\n" +
 	  				 "Host: " + host + ":" + port + "\r\n" + "Connection: Keep-Alive\r\n\r\n";
 
 
-	ofstream out;
-	out.open("output", ios::binary);
+	// ofstream out;
+	// out.open("output", ios::binary);
 	long total_bytes = 0;
 
 	for (int j = 0; j < n_iterations; ++j) {
@@ -128,10 +133,12 @@ int main(int argc, char *argv[])
 		struct timeval current_time;
 		long long microseconds;
 
-		send(sockfd, request.c_str(), request.size(), 0);
+
 		gettimeofday(&current_time, NULL);
 		microseconds = (long long)current_time.tv_sec * 1000000 + current_time.tv_usec;
 		timestamp_array[timestamp_count++] = microseconds;
+		send(sockfd, request.c_str(), request.size(), 0);
+		
 
 
 		bool header = true;
@@ -147,19 +154,19 @@ int main(int argc, char *argv[])
 			if (numbytes > 0) {
 				// cout << numbytes << endl;
 				total_bytes += numbytes;
-				if (header) {
-					// cout << buf << endl;
-					char* head = strstr(buf, "\r\n\r\n");
-					// cout << head << endl;
-					if (head != NULL){
-						head+=4;
-						header = false;
-					}
-					out.write(head, numbytes - 19);
-					// printf("strlen(head): %ld", strlen(head) );
-					// printf("numbytes head %d", numbytes);
-				} 
-				else out.write(buf, sizeof(char) * numbytes);
+				// if (header) {
+				// 	// cout << buf << endl;
+				// 	char* head = strstr(buf, "\r\n\r\n");
+				// 	// cout << head << endl;
+				// 	if (head != NULL){
+				// 		head+=4;
+				// 		header = false;
+				// 	}
+				// 	// out.write(head, numbytes - 19);
+				// 	// printf("strlen(head): %ld", strlen(head) );
+				// 	// printf("numbytes head %d", numbytes);
+				// } 
+				// else out.write(buf, sizeof(char) * numbytes);
 
 				if (total_bytes - 19 >= timestamp_filesize) {
 					// "TIMESTAMP" is in the received message
