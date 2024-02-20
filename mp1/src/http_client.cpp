@@ -134,9 +134,13 @@ int main(int argc, char *argv[])
 		long long microseconds;
 
 
-		gettimeofday(&current_time, NULL);
-		microseconds = (long long)current_time.tv_sec * 1000000 + current_time.tv_usec;
-		timestamp_array[timestamp_count++] = microseconds;
+		// gettimeofday(&current_time, NULL);
+		// microseconds = (long long)current_time.tv_sec * 1000000 + current_time.tv_usec;
+		// timestamp_array[timestamp_count++] = microseconds;
+
+		// Start timestamp
+		auto start = std::chrono::high_resolution_clock::now();
+
 		send(sockfd, request.c_str(), request.size(), 0);
 		
 
@@ -171,9 +175,11 @@ int main(int argc, char *argv[])
 				if (total_bytes - 19 >= timestamp_filesize) {
 					// "TIMESTAMP" is in the received message
 					// printf("printing timestamp\n");
-					gettimeofday(&current_time, NULL);
-					microseconds = (long long)current_time.tv_sec * 1000000 + current_time.tv_usec;
-					timestamp_array[timestamp_count++] = microseconds;
+					// gettimeofday(&current_time, NULL);
+					// microseconds = (long long)current_time.tv_sec * 1000000 + current_time.tv_usec;
+					// End timestamp
+					auto end = std::chrono::high_resolution_clock::now();
+					timestamp_array[timestamp_count++] = std::chrono::duration<double, std::micro>(end - start).count();
 					timestamp_filesize += filesize;
 					printf("total bytes: %ld \n", total_bytes);
 					// printf("j: %d\n \n", j);
@@ -193,8 +199,8 @@ int main(int argc, char *argv[])
 	for (int i = 0; i < timestamp_count; ++i) {
 		// if i is even, then print "start time" before the timestamp and if i is odd, then print 
 		// "end time" before the timestamp
-		if (i % 2 == 0) fprintf(client_timestamp_fp, "start time: ");
-		else fprintf(client_timestamp_fp, "end time: ");
+		// if (i % 2 == 0) fprintf(client_timestamp_fp, "start time: ");
+		// else fprintf(client_timestamp_fp, "end time: ");
 		fprintf(client_timestamp_fp, "%lld\n", timestamp_array[i]);
 	}
 	fclose(client_timestamp_fp);
