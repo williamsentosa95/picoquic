@@ -17,6 +17,7 @@
 #include <iostream>
 #include <istream>
 #include <time.h>
+#include <netinet/tcp.h>
 
 using namespace std;
 
@@ -136,6 +137,17 @@ int main(int argc, char *argv[])
 		if (new_fd == -1) {
 			perror("accept");
 			continue;
+		}
+
+		int flag = 1; // Flag to enable TCP_NODELAY
+		int result;
+
+		// Assuming sockfd has been created with socket() or accepted with accept()
+
+		result = setsockopt(new_fd, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
+		if (result < 0) {
+			perror("setsockopt TCP_NODELAY");
+			exit(EXIT_FAILURE);
 		}
 
 		inet_ntop(their_addr.ss_family,
