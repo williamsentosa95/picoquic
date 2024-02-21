@@ -183,12 +183,11 @@ int main(int argc, char *argv[])
 	// printf("%lld\n", microseconds);
 	
 
-	for (int i = 0; i < timestamp_count; ++i) {
+	for (int i = 0; i < timestamp_count; i=i+2) {
 		// if i is even, then print "start time" before the timestamp and if i is odd, then print 
 		// "end time" before the timestamp
-		if (i % 2 == 0) fprintf(client_timestamp_fp, "start time: ");
-		else fprintf(client_timestamp_fp, "end time: ");
-		fprintf(client_timestamp_fp, "%lld\n", timestamp_array[i]);
+		
+		fprintf(client_timestamp_fp, "%lld\n", timestamp_array[i+1] - timestamp_array[i]);
 	}
 	fclose(client_timestamp_fp);
 	
