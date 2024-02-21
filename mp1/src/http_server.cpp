@@ -167,10 +167,10 @@ int main(void)
 				break;
 			}
 
-			printf("server: received '%s'\n", buf);
+			// printf("server: received '%s'\n", buf);
 
 			int size = atoi(buf);
-			printf("size: %d\n", size);
+			// printf("size: %d\n", size);
 
 			while (offset < size) {
 				// Calculate the number of bytes to send in this chunk
@@ -199,6 +199,8 @@ int main(void)
         close(new_fd);  // parent doesn't need this
 		break;
     }
+
+	printf("server: sent %d bytes\n", total_bytes);
 
     return 0;
 }
