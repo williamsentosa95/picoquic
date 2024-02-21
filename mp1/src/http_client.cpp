@@ -48,14 +48,15 @@ int main(int argc, char *argv[])
 	long long timestamp_array[MAX_TIMESTAMP_COUNT];
 	int timestamp_count = 0;
 
-    if (argc != 5) {
-        fprintf(stderr,"usage: client hostname n_iterations timestamp_file message_size\n");
+    if (argc != 6) {
+        fprintf(stderr,"usage: client hostname n_iterations timestamp_file message_size sleep_time\n");
         exit(1);
     }
 
 	int n_iterations = atoi(argv[2]);
 	char *client_file_name = argv[3];
 	string request = argv[4];
+	int sleep_time = atoi(argv[5]);
 	int datasize = stoi(request);
 	int data_tracking = datasize;
 
@@ -101,7 +102,7 @@ int main(int argc, char *argv[])
 	for (int i = 0; i < n_iterations; i++) {
 
 		
-		// usleep(10000); // 1ms
+		usleep(sleep_time); // 1ms
 		auto start = std::chrono::high_resolution_clock::now();
 		send(sockfd, request.c_str(), request.size(), 0);
 
