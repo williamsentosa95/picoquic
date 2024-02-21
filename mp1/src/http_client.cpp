@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
     struct addrinfo hints, *servinfo, *p;
     int rv;
     char s[INET6_ADDRSTRLEN];
-	int n_iterations = 25;
+	int n_iterations = 1000;
 	int total_bytes = 0;
 
     if (argc != 2) {
@@ -91,6 +91,9 @@ int main(int argc, char *argv[])
 	string request = "1048575";
 	int datasize = 1048575;
 	int data_tracking = datasize;
+	const int MAX_TIMESTAMP_COUNT = 100000; // Define the maximum number of timestamps you want to store
+	long long timestamp_array[MAX_TIMESTAMP_COUNT];
+	int timestamp_count = 0;
 
 	for (int i = 0; i < n_iterations; i++) {
 
@@ -113,8 +116,9 @@ int main(int argc, char *argv[])
 					printf("total_bytes: %d\n", total_bytes);
 					data_tracking += datasize;
 					auto end = std::chrono::high_resolution_clock::now();
-					printf("%ld\n", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
-
+					// printf("%ld\n", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
+					timestamp_array[timestamp_count++] =
+						std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 					break;
 				}
 			} else {
@@ -129,8 +133,17 @@ int main(int argc, char *argv[])
 
 	}
 
-    
-    
+    FILE *client_timestamp_fp;
+	const char *client_file_name = "client_ts.csv";
+	client_timestamp_fp = fopen(client_file_name, "w");
+    for (int i = 0; i < timestamp_count; ++i) {
+		// if i is even, then print "start time" before the timestamp and if i is odd, then print 
+		// "end time" before the timestamp
+		// if (i % 2 == 0) fprintf(client_timestamp_fp, "start time: ");
+		// else fprintf(client_timestamp_fp, "end time: ");
+		fprintf(client_timestamp_fp, "%lld\n", timestamp_array[i]);
+	}
+	fclose(client_timestamp_fp);
 
     close(sockfd);
 
