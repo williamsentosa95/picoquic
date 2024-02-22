@@ -53,7 +53,7 @@ int main(void)
     char s[INET6_ADDRSTRLEN];
     int rv;
 	int numbytes;
-	int total_bytes = 0;
+	long long total_bytes = 0;
 	
 
 
@@ -200,7 +200,7 @@ int main(void)
 		break;
     }
 
-	printf("server: sent %d bytes\n", total_bytes);
+	printf("server: sent %lld bytes\n", total_bytes);
 
     return 0;
 }

@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
     int rv;
     char s[INET6_ADDRSTRLEN];
 	
-	int total_bytes = 0;
+	long long total_bytes = 0;
 	const int MAX_TIMESTAMP_COUNT = 100000; // Define the maximum number of timestamps you want to store
 	long long timestamp_array[MAX_TIMESTAMP_COUNT];
 	int timestamp_count = 0;
@@ -53,12 +53,12 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-	int n_iterations = atoi(argv[2]);
+	long long n_iterations = atoi(argv[2]);
 	char *client_file_name = argv[3];
 	string request = argv[4];
 	int sleep_time = atoi(argv[5]);
-	int datasize = stoi(request);
-	int data_tracking = datasize;
+	long long datasize = stoi(request);
+	long long data_tracking = datasize;
 
 
 
@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
 
     close(sockfd);
 
-	printf("total_bytes received: %d, total_bytes_expected = %d, Agree: %s \n", total_bytes, 
+	printf("total_bytes received: %lld, total_bytes_expected = %lld, Agree: %s \n", total_bytes, 
 		n_iterations*datasize, total_bytes == n_iterations*datasize ? "true" : "false");
 
     return 0;
