@@ -422,11 +422,26 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
     target_include_directories(server_toy PRIVATE loglib picoquic)
     set_picoquic_compile_settings(server_toy)
 
+    # Added by Talal
     add_executable(client_toy
     toy_app/client.cpp)
     target_link_libraries(client_toy PRIVATE picoquic-log picoquic-core)
     target_include_directories(client_toy PRIVATE loglib picoquic)
     set_picoquic_compile_settings(client_toy)
+
+    # Added by Talal
+    add_executable(sender
+    SVC/sender.cpp)
+    target_link_libraries(sender PRIVATE picoquic-log picoquic-core)
+    target_include_directories(sender PRIVATE loglib picoquic)
+    set_picoquic_compile_settings(sender)
+
+    # Added by Talal
+    add_executable(receiver
+    SVC/receiver.cpp)
+    target_link_libraries(receiver PRIVATE picoquic-log picoquic-core)
+    target_include_directories(receiver PRIVATE loglib picoquic)
+    set_picoquic_compile_settings(receiver)
 
 endif()
 

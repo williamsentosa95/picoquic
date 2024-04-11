@@ -5,24 +5,56 @@
 #include <cmath>
 #include <chrono>
 #include <fstream>
+#include <queue>
+#include <mutex>
+#include <map>
 
-std::string msg(1000000000, 'a');
+int timeout;
+int wait_period;
+int initial_port;
+std::queue<int> queue_0;
+std::queue<int> queue_1_2;
+std::mutex queue_mutex_0;
+std::mutex queue_mutex_1_2;
 
-typedef struct st_server_app_ctx_t
+struct MsgInfo
 {
-  int last_path_id;
-} server_app_ctx_t;
+  uint32_t msg_no;
+  uint32_t msg_size;
+  size_t bytes_received;
+  MsgInfo()
+  {
+    this->msg_no = 0;
+    this->msg_size = 0;
+    this->bytes_received = 0;
+  }
+};
 
-int sample_server_callback(picoquic_cnx_t *cnx,
-                           uint64_t stream_id, uint8_t *bytes, size_t length,
-                           picoquic_call_back_event_t fin_or_event, void *callback_ctx, void *stream_ctx);
+typedef struct st_receiver_app_ctx_t
+{
+  std::map<uint64_t, MsgInfo> msg_info;
+} receiver_app_ctx_t;
 
-// int sample_server_loop_cb(picoquic_quic_t *quic, picoquic_packet_loop_cb_enum cb_mode,
-//                           void *callback_ctx, void *callback_arg);
+int receiver_app_callback(picoquic_cnx_t *cnx,
+                          uint64_t stream_id, uint8_t *bytes, size_t length,
+                          picoquic_call_back_event_t fin_or_event, void *callback_ctx, void *stream_ctx);
+
+void render_frames();
 
 int main(int argc, char **argv)
 {
-  std::cout << "Server started" << std::endl;
+  // if (((4 != argc) || (0 == atoi(argv[1])) || (0 == atoi(argv[2]))) || (0 == atoi(argv[3])))
+  // {
+  //   std::cout << "usage: appserver server_port timeout(s) wait_perod(ms)" << endl;
+  //   return 0;
+  // }
+  std::cout << "Receiver started" << std::endl;
+
+  // int port = atoi(argv[1]);
+  // timeout = atoi(argv[2]);
+  // wait_period = atoi(argv[3]);
+  wait_period = 60;
+  // initial_port = port;
 
   int ret = 0;
   int server_port = 12000;
@@ -32,11 +64,12 @@ int main(int argc, char **argv)
   uint64_t current_time = picoquic_current_time();
 
   // Server app context
-  server_app_ctx_t *server_ctx = new server_app_ctx_t();
-  server_ctx->last_path_id = 0;
+  receiver_app_ctx_t *receiver_ctx = new receiver_app_ctx_t();
+  // receiver_ctx->msg_info_high_priority_stream.msg_data = buffer0;
+  // receiver_ctx->msg_info_low_priority_stream.msg_data = buffer1;
 
   // Create a quic context
-  picoquic_quic_t *quic = picoquic_create(10, server_cert, server_key, NULL, default_alpn, sample_server_callback, server_ctx,
+  picoquic_quic_t *quic = picoquic_create(10, server_cert, server_key, NULL, default_alpn, receiver_app_callback, receiver_ctx,
                                           NULL, NULL, NULL, current_time, NULL,
                                           NULL, NULL, 0);
 
@@ -54,16 +87,33 @@ int main(int argc, char **argv)
   // picoquic_set_qlog(quic, qlog_dir);
   // picoquic_set_log_level(quic, 1);
 
-  // Keep on waiting for packets
-  if (ret == 0)
+  picoquic_packet_loop_param_t *param = new picoquic_packet_loop_param_t{0};
+  param->local_port = (uint16_t)server_port;
+  param->local_af = 0;
+  param->dest_if = 0;
+  param->socket_buffer_size = 0;
+  param->do_not_use_gso = 0;
+  int *ret_net_thread = new int;
+  picoquic_network_thread_ctx_t *net_thread_ctx = picoquic_start_network_thread(quic, param, NULL, NULL, ret_net_thread);
+
+  if (net_thread_ctx == NULL)
   {
-    ret = picoquic_packet_loop(quic, server_port, 0, 0, 0, 0, NULL, NULL);
+    fprintf(stderr, "Could not start network thread\n");
+    ret = -1;
   }
 
-  /* And finish. */
-  printf("Server exit, ret = %d\n", ret);
+  // // Keep on waiting for packets
+  // if (ret == 0)
+  // {
+  // ret = picoquic_packet_loop(quic, server_port, 0, 0, 0, 0, NULL, NULL);
+  // }
+
+  render_frames();
+
+  picoquic_delete_network_thread(net_thread_ctx);
 
   /* Clean up */
+  delete receiver_ctx;
   if (quic != NULL)
   {
     picoquic_free(quic);
@@ -72,134 +122,307 @@ int main(int argc, char **argv)
   return ret;
 }
 
-int sample_server_callback(picoquic_cnx_t *cnx,
-                           uint64_t stream_id, uint8_t *bytes, size_t length,
-                           picoquic_call_back_event_t fin_or_event, void *callback_ctx, void *stream_ctx)
+int receiver_app_callback(picoquic_cnx_t *cnx,
+                          uint64_t stream_id, uint8_t *bytes, size_t length,
+                          picoquic_call_back_event_t fin_or_event, void *callback_ctx, void *stream_ctx)
 {
 
-  st_server_app_ctx_t *server_ctx = (st_server_app_ctx_t *)callback_ctx;
+  receiver_app_ctx_t *receiver_ctx = (receiver_app_ctx_t *)callback_ctx;
+  picoquic_stream_head_t *stream = picoquic_find_stream(cnx, stream_id);
 
   switch (fin_or_event)
   {
   case picoquic_callback_stream_data: // Data received from peer on stream N
   {
-    std::string data = std::string((char *)bytes, length);
-
-    // Send a response
-    long num_bytes = strtol(data.c_str(), NULL, 10);
-    std::cout << "Requested size is " << num_bytes << std::endl
-              << std::endl
-              << std::endl;
-
-    // picoquic_set_stream_path_affinity(cnx, stream_id, cnx->path[server_ctx->last_path_id]->unique_path_id);
-    // picoquic_set_stream_path_affinity(cnx, stream_id, cnx->path[1]->unique_path_id);
-    stream_id = picoquic_get_next_local_stream_id(cnx, 0);
-    picoquic_set_stream_priority(cnx, stream_id, 0);
-    std::cout << "First_stream_id: " << stream_id << std::endl;
-    picoquic_add_to_stream(cnx, stream_id, (uint8_t *)msg.c_str(), num_bytes, 0);
-
-    stream_id = picoquic_get_next_local_stream_id(cnx, 0);
-    picoquic_set_stream_priority(cnx, stream_id, 1);
-    std::cout << "Second_stream_id: " << stream_id << std::endl;
-    picoquic_add_to_stream(cnx, stream_id, (uint8_t *)msg.c_str(), num_bytes, 0);
-
-    if (server_ctx->last_path_id == 0)
+    if (receiver_ctx->msg_info.count(stream_id) == 0)
     {
-      server_ctx->last_path_id = 1;
+      receiver_ctx->msg_info[stream_id] = MsgInfo();
     }
-    else
-    {
-      server_ctx->last_path_id = 0;
-    }
+    MsgInfo &msg = receiver_ctx->msg_info[stream_id];
+    // std::cout << "Data received. len: " << length << std::endl;
 
-    std::cout << "Server callback: response sent" << std::endl;
+    while (length > 0)
+    {
+      if (msg.bytes_received == 0)
+      {
+        msg.msg_no = *(uint32_t *)bytes;
+        msg.msg_size = *(uint32_t *)&bytes[4];
+        length -= 8; // size of custom header
+        bytes += 8;  // size of custom header
+      }
+
+      if (msg.bytes_received + length <= msg.msg_size)
+      {
+        msg.bytes_received += length;
+        length = 0;
+      }
+      else
+      {
+        int remaining = msg.msg_size - msg.bytes_received;
+        msg.bytes_received = msg.msg_size;
+        length -= remaining;
+        bytes += remaining;
+      }
+
+      if (msg.bytes_received == msg.msg_size)
+      {
+        std::cout << "Received message no: " << msg.msg_no << " size: " << msg.msg_size << std::endl;
+        if (msg.msg_no % 3 != 0)
+        {
+          queue_mutex_1_2.lock();
+          queue_1_2.push(msg.msg_no);
+          queue_mutex_1_2.unlock();
+        }
+        else
+        {
+          queue_mutex_0.lock();
+          queue_0.push(msg.msg_no);
+          queue_mutex_0.unlock();
+        }
+
+        msg.bytes_received = 0;
+      }
+    }
   }
   break;
   case picoquic_callback_stream_fin: // Fin received from peer on stream N; data is optional
-    std::cout << "Server callback: stream fin. length is " << length << std::endl;
+    std::cout << "Receiver callback: stream fin. length is " << length << std::endl;
     break;
   case picoquic_callback_path_available:
-    std::cout << "Client callback: path available" << std::endl;
+    std::cout << "Receiver callback: path available" << std::endl;
+    std::cout << "Number of paths: " << cnx->nb_paths << std::endl;
     break;
   case picoquic_callback_path_suspended:
-    std::cout << "Client callback: path suspended" << std::endl;
+    std::cout << "Receiver callback: path suspended" << std::endl;
     break;
   case picoquic_callback_path_deleted:
-    std::cout << "Client callback: path deleted" << std::endl;
+    std::cout << "Receiver callback: path deleted" << std::endl;
     break;
   case picoquic_callback_path_quality_changed:
-    std::cout << "Client callback: path quality changed" << std::endl;
+    std::cout << "Receiver callback: path quality changed" << std::endl;
     break;
   case picoquic_callback_close:
-    std::cout << "Server callback: connection closed" << std::endl;
-    for (int i = 0; i < cnx->nb_paths; i++)
-    {
-      std::cout << "Path " << i << " is " << cnx->path[i]->selected << std::endl;
-    }
+    std::cout << "Receiver callback: connection closed" << std::endl;
     break;
   default:
-    std::cout << "Server callback: unknown event " << fin_or_event << std::endl;
+    std::cout << "Receiver callback: unknown event " << fin_or_event << std::endl;
     break;
   }
 
   return 0;
 }
 
-// int sample_server_loop_cb(picoquic_quic_t *quic, picoquic_packet_loop_cb_enum cb_mode,
-//                           void *callback_ctx, void *callback_arg)
-// {
-//   st_server_app_ctx_t *server_ctx = (st_server_app_ctx_t *)callback_ctx;
-//   std::cout << "Server loop callback" << std::endl;
-//   switch (cb_mode)
-//   {
-//   case picoquic_packet_loop_after_receive:
-//     std::cout << "Server loop callback: after receive" << std::endl;
-//     break;
-//   case picoquic_packet_loop_after_send:
-//     std::cout << "Server loop callback: after send" << std::endl;
-//     break;
-//   default:
-//     std::cout << "Server loop callback: unknown event " << cb_mode << std::endl;
-//     break;
-//   }
+void render_frames()
+{
+  int rendered_frame_no = -1;
+  int rendered_frame_max_layer = -1;
+  int to_render_frame_no = -1;
+  int to_render_frame_max_layer = -1;
+  int msg_no = -1;
+  int frame_no = -1;
+  bool isIframe = false;
+  bool layer_1_received;
+  bool layer_2_received;
+  bool got_layer_0;
+  std::map<int, int> ahead_layer_0; // frame_no, msg_no
+  std::map<int, int> ahead_layer_1; // frame_no, msg_no
+  std::map<int, int> ahead_layer_2; // frame_no, msg_no
 
-//   return 0;
-// }
+  while (true)
+  {
 
-// Notes
-// typedef enum {
-//     picoquic_callback_stream_data = 0, /* Data received from peer on stream N */
-//     picoquic_callback_stream_fin, /* Fin received from peer on stream N; data is optional */
-//     picoquic_callback_stream_reset, /* Reset Stream received from peer on stream N; bytes=NULL, len = 0  */
-//     picoquic_callback_stop_sending, /* Stop sending received from peer on stream N; bytes=NULL, len = 0 */
-//     picoquic_callback_stateless_reset, /* Stateless reset received from peer. Stream=0, bytes=NULL, len=0 */
-//     picoquic_callback_close, /* Connection close. Stream=0, bytes=NULL, len=0 */
-//     picoquic_callback_application_close, /* Application closed by peer. Stream=0, bytes=NULL, len=0 */
-//     picoquic_callback_stream_gap,  /* bytes=NULL, len = length-of-gap or 0 (if unknown) */
-//     picoquic_callback_prepare_to_send, /* Ask application to send data in frame, see picoquic_provide_stream_data_buffer for details */
-//     picoquic_callback_almost_ready, /* Data can be sent, but the connection is not fully established */
-//     picoquic_callback_ready, /* Data can be sent and received, connection migration can be initiated */
-//     picoquic_callback_datagram, /* Datagram frame has been received */
-//     picoquic_callback_version_negotiation, /* version negotiation requested */
-//     picoquic_callback_request_alpn_list, /* Provide the list of supported ALPN */
-//     picoquic_callback_set_alpn, /* Set ALPN to negotiated value */
-//     picoquic_callback_pacing_changed, /* Pacing rate for the connection changed */
-//     picoquic_callback_prepare_datagram, /* Prepare the next datagram */
-//     picoquic_callback_datagram_acked, /* Ack for packet carrying datagram-frame received from peer */
-//     picoquic_callback_datagram_lost, /* Packet carrying datagram-frame probably lost */
-//     picoquic_callback_datagram_spurious, /* Packet carrying datagram-frame was not really lost */
-//     picoquic_callback_path_available, /* A new path is available, or a suspended path is available again */
-//     picoquic_callback_path_suspended, /* An available path is suspended */
-//     picoquic_callback_path_deleted, /* An existing path has been deleted */
-//     picoquic_callback_path_quality_changed /* Some path quality parameters have changed */
-// } picoquic_call_back_event_t;
+    // Check if layer 0 already received. Otherwise, get it from queue
+    if (ahead_layer_0.count(rendered_frame_no + 1) == 1)
+    {
+      msg_no = ahead_layer_0.at(rendered_frame_no + 1);
+      std::fprintf(stdout, "render_error Got layer 0 from ahead map. rendered_frame_no: %d trying to render: %d msg_no: %d\n",
+                   rendered_frame_no,
+                   rendered_frame_no + 1,
+                   msg_no);
+    }
+    else
+    {
+      queue_mutex_0.lock();
+      if (queue_0.empty())
+      {
+        queue_mutex_0.unlock();
+        continue;
+      }
 
-// int sample_server_loop_cb(picoquic_quic_t *quic, picoquic_packet_loop_cb_enum cb_mode,
-//                           void *callback_ctx, void *callback_arg)
-// {
-//   std::cout << "Server loop callback" << std::endl;
-//   return 0;
-// }
+      // Received layer 0
+      if (queue_0.size() > 1)
+      {
+        std::fprintf(stdout, "render_error Got more than 1 layer 0. no of layer 0 frames: %d rendered_frame_no: %d\n",
+                     queue_0.size(),
+                     rendered_frame_no);
+      }
+      msg_no = queue_0.front();
+      queue_0.pop();
+      queue_mutex_0.unlock();
+    }
 
-// ../picoquic_sample client localhost 4433 ./temp <filename>
-// ../picoquic_sample server 4433 ./ca-cert.pem ./server-key.pem ./server_files
+    to_render_frame_no = msg_no / 3;
+    isIframe = to_render_frame_no % 10 == 0;
+
+    // Check if it's not a previous frame
+    if (to_render_frame_no < rendered_frame_no)
+    {
+      std::fprintf(stdout, "render_error Got frame no smaller than rendered frame no. rendered_frame_no: %d trying to render: %d msg_no: %d\n",
+                   rendered_frame_no,
+                   to_render_frame_no,
+                   msg_no);
+      continue;
+    }
+
+    // Check if P frame will be rendered
+    // if (to_render_frame_no != rendered_frame_no + 1)
+    if (!isIframe && to_render_frame_no != rendered_frame_no + 1)
+    {
+      std::fprintf(stdout, "render_error Did not get correct next frame layer 0. rendered_frame_no: %d frame no for layer 0: %d msg_no: %d\n",
+                   rendered_frame_no,
+                   to_render_frame_no,
+                   msg_no);
+
+      if (to_render_frame_no > rendered_frame_no)
+      {
+        ahead_layer_0[to_render_frame_no] = msg_no;
+      }
+      continue;
+    }
+
+    // Frame will be rendered. Wait for higher layers now
+    int64_t layer0_ts = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    layer_1_received = false;
+    layer_2_received = false;
+    if (ahead_layer_1.count(to_render_frame_no) == 1)
+    {
+      std::fprintf(stdout, "render_error Got layer 1 from ahead map. rendered_frame_no: %d trying to render: %d msg_no: %d\n",
+                   rendered_frame_no,
+                   to_render_frame_no,
+                   ahead_layer_1.at(to_render_frame_no));
+      layer_1_received = true;
+    }
+
+    if (ahead_layer_2.count(to_render_frame_no) == 1)
+    {
+      std::fprintf(stdout, "render_error Got layer 2 from ahead map. rendered_frame_no: %d trying to render: %d msg_no: %d\n",
+                   rendered_frame_no,
+                   to_render_frame_no,
+                   ahead_layer_2.at(to_render_frame_no));
+      layer_2_received = true;
+    }
+
+    got_layer_0 = false;
+    // while ((!layer_1_received || !layer_2_received))
+    while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - layer0_ts < wait_period && (!layer_1_received || !layer_2_received))
+    {
+      // Check if layer 0 of next frame received or not
+      // if (ahead_layer_0.count(to_render_frame_no + 1) == 1)
+      // {
+      //    got_layer_0 = true;
+      //    std::fprintf(stdout, "render_error Got layer 0 from ahead map while waiting for layer 1&2. rendered_frame_no: %d trying to render: %d msg_no: %d\n",
+      //                 rendered_frame_no,
+      //                 rendered_frame_no + 1,
+      //                 msg_no);
+      // }
+      // else
+      // {
+      //    queue_mutex_0.lock();
+      //    while (!queue_0.empty())
+      //    {
+      //       int temp_msg_no = queue_0.front();
+      //       queue_0.pop();
+      //       ahead_layer_0[temp_msg_no / 3] = temp_msg_no;
+      //       if (temp_msg_no / 3 == to_render_frame_no + 1)
+      //       {
+      //          std::fprintf(stdout, "render_error Got layer 0 from queue while waiting for layer 1&2. rendered_frame_no: %d trying to render: %d msg_no: %d\n",
+      //                       rendered_frame_no,
+      //                       rendered_frame_no + 1,
+      //                       msg_no);
+      //          got_layer_0 = true;
+      //          break;
+      //       }
+      //    }
+      //    queue_mutex_0.unlock();
+      // }
+
+      queue_mutex_0.lock();
+      if (queue_0.size() >= 2)
+      {
+        got_layer_0 = true;
+        std::fprintf(stdout, "render_error Got more than 1 layer 0 while waiting for layer 1&2. no of layer 0 frames: %d rendered_frame_no: %d\n",
+                     queue_0.size(),
+                     rendered_frame_no);
+      }
+      queue_mutex_0.unlock();
+
+      if (got_layer_0)
+      {
+        break;
+      }
+
+      queue_mutex_1_2.lock();
+      if (queue_1_2.empty())
+      {
+        queue_mutex_1_2.unlock();
+        continue;
+      }
+
+      // Received layer 1 or 2
+      msg_no = queue_1_2.front();
+      frame_no = msg_no / 3;
+      if (frame_no != to_render_frame_no)
+      {
+        std::fprintf(stdout, "render_error Did not get correct frame no for layer 1&2 rendered_frame_no: %d about to render frame no %d frame no for layer 1/2: %d msg_no: %d\n",
+                     rendered_frame_no,
+                     to_render_frame_no,
+                     frame_no,
+                     msg_no);
+        if (frame_no > rendered_frame_no)
+        {
+          if (msg_no % 3 == 1)
+          {
+            ahead_layer_1[frame_no] = msg_no;
+          }
+          if (msg_no % 3 == 2)
+          {
+            ahead_layer_2[frame_no] = msg_no;
+          }
+        }
+        queue_1_2.pop();
+        queue_mutex_1_2.unlock();
+        continue;
+      }
+      queue_1_2.pop();
+      queue_mutex_1_2.unlock();
+
+      if (msg_no % 3 == 1)
+      {
+        layer_1_received = true;
+      }
+
+      if (msg_no % 3 == 2)
+      {
+        layer_2_received = true;
+      }
+    }
+
+    // cout << "Waited " << duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count() - layer0_ts << " ms for higher layers" << endl;
+
+    // Rendering frame
+    if (layer_1_received && layer_2_received)
+      to_render_frame_max_layer = 2;
+    else if (layer_1_received)
+      to_render_frame_max_layer = 1;
+    else
+      to_render_frame_max_layer = 0;
+
+    rendered_frame_no = to_render_frame_no;
+    isIframe ? rendered_frame_max_layer = to_render_frame_max_layer : rendered_frame_max_layer = std::min(rendered_frame_max_layer, to_render_frame_max_layer);
+    int64_t render_ts = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    std::fprintf(stdout, "render_frame frame_no: %d layers: %d ts_render: %lu\n",
+                 rendered_frame_no,
+                 rendered_frame_max_layer,
+                 render_ts);
+  }
+}
