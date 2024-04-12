@@ -427,6 +427,18 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
     target_link_libraries(client_toy PRIVATE picoquic-log picoquic-core)
     target_include_directories(client_toy PRIVATE loglib picoquic)
     set_picoquic_compile_settings(client_toy)
+    
+    add_executable(server_toy_mp
+    toy_app/server_mp.cpp)
+    target_link_libraries(server_toy_mp PRIVATE picoquic-log picoquic-core)
+    target_include_directories(server_toy_mp PRIVATE loglib picoquic)
+    set_picoquic_compile_settings(server_toy_mp)
+
+    add_executable(client_toy_mp
+    toy_app/client_mp.cpp)
+    target_link_libraries(client_toy_mp PRIVATE picoquic-log picoquic-core)
+    target_include_directories(client_toy_mp PRIVATE loglib picoquic)
+    set_picoquic_compile_settings(client_toy_mp)
 
 endif()
 

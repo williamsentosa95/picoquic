@@ -2,6 +2,7 @@
 #include <picoquic.h>
 #include "picoquic_utils.h"
 #include "picoquic_packet_loop.h"
+#include "picoquic_internal.h"
 #include <netinet/in.h>
 #include <vector>
 #include <chrono>
@@ -33,8 +34,9 @@ int main(int argc, char *argv[])
 {
   std::cout << "Client started" << std::endl;
 
-  if(argc != 4) {
-    std::cout << "Usage: ./client_toy <total_requests> <bytes_requested> <output_file>" << std::endl;
+  if (argc != 4)
+  {
+    std::cout << "Usage: ./client_toy_mp <total_requests> <bytes_requested> <output_file>" << std::endl;
     return -1;
   }
 
@@ -60,6 +62,8 @@ int main(int argc, char *argv[])
 
   // // Set some configurations
   picoquic_set_default_congestion_algorithm(quic, picoquic_cubic_algorithm);
+  picoquic_set_default_multipath_option(quic, 1);  // Enable multipath
+  picoquic_enable_path_callbacks_default(quic, 1); // Enable path callbacks e.g path available, path suspended, etc.
   // // picoquic_set_key_log_file_from_env(quic);
   // // picoquic_set_qlog(quic, qlog_dir);
   // // picoquic_set_log_level(quic, 1);
@@ -211,6 +215,14 @@ int sample_client_callback(picoquic_cnx_t *cnx,
         }
         file.close();
 
+        for (int i = 0; i < cnx->nb_paths; i++)
+        {
+          char text1[128];
+          char text2[128];
+
+          std::cout << "Path " << i << ": from: " << picoquic_addr_text((sockaddr *)&cnx->path[i]->local_addr, text1, sizeof(text1)) << " to: " << picoquic_addr_text((sockaddr *)&cnx->path[i]->peer_addr, text2, sizeof(text2)) << std::endl;
+        }
+
         // delete[] client_ctx->time_taken;
         delete[] client_ctx->start_times;
         delete[] client_ctx->end_times;
@@ -225,7 +237,31 @@ int sample_client_callback(picoquic_cnx_t *cnx,
     break;
   case picoquic_callback_ready:
   {
-    // std::cout << "Client callback: ready length " << length << std::endl;
+    // probe a new path (SAT)
+    struct sockaddr_storage addr_from;
+    int addr_from_is_name = 0;
+    struct sockaddr_storage addr_to;
+    int addr_to_is_name = 0;
+    int my_port = ntohs(((sockaddr_in *)&cnx->path[0]->local_addr)->sin_port);
+
+    picoquic_get_server_address("100.64.0.4", 12000, &addr_from, &addr_from_is_name); // remote addr
+    picoquic_get_server_address("100.64.0.3", my_port, &addr_to, &addr_to_is_name);   // local addr
+
+    int ret_probe = picoquic_probe_new_path_ex(cnx, (struct sockaddr *)&addr_from, (struct sockaddr *)&addr_to, 0, picoquic_current_time(), 0);
+
+    if (ret_probe == 0)
+    {
+      std::cout << "Probe successful" << std::endl;
+    }
+    else
+    {
+      std::cout << "Probe failed" << std::endl;
+    }
+    break;
+  }
+  case picoquic_callback_path_available:
+  {
+    std::cout << "Client callback: path available" << std::endl;
     int is_unidir = 0;
     uint64_t stream_id = picoquic_get_next_local_stream_id(cnx, is_unidir);
     // std::cout << "Steam id:" << stream_id << std::endl;
@@ -236,9 +272,19 @@ int sample_client_callback(picoquic_cnx_t *cnx,
     // Send some data
     picoquic_add_to_stream(cnx, stream_id, (const uint8_t *)client_ctx->request_msg.c_str(), client_ctx->request_msg.length(), 0);
     client_ctx->requests_sent++;
-
     break;
   }
+  case picoquic_callback_path_suspended:
+    std::cout << "Client callback: path suspended" << std::endl;
+    break;
+  case picoquic_callback_path_deleted:
+    std::cout << "Client callback: path deleted" << std::endl;
+    break;
+  case picoquic_callback_path_quality_changed:
+    std::cout << "Client callback: path quality changed" << std::endl;
+    break;
+  case picoquic_callback_close:
+    std::cout << "Client callback: connection closed" << std::endl;
   default:
     // std::cout << "Client callback: unknown event " << fin_or_event << std::endl;
     break;
