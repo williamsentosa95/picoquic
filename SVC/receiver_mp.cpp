@@ -92,7 +92,7 @@ int main(int argc, char **argv)
   param->local_af = 0;
   param->dest_if = 0;
   param->socket_buffer_size = 0;
-  param->do_not_use_gso = 0;
+  param->do_not_use_gso = 1;
   int *ret_net_thread = new int;
   picoquic_network_thread_ctx_t *net_thread_ctx = picoquic_start_network_thread(quic, param, NULL, NULL, ret_net_thread);
 
@@ -189,8 +189,15 @@ int receiver_app_callback(picoquic_cnx_t *cnx,
     std::cout << "Receiver callback: stream fin. length is " << length << std::endl;
     break;
   case picoquic_callback_path_available:
-    std::cout << "Receiver callback: path available" << std::endl;
+    std::cout << "Receiver callback: path available: " << stream_id << std::endl;
     std::cout << "Number of paths: " << cnx->nb_paths << std::endl;
+    for (int i = 0; i < cnx->nb_paths; i++)
+    {
+      char text1[128];
+      char text2[128];
+
+      std::cout << "Path " << i << ": from: " << picoquic_addr_text((sockaddr *)&cnx->path[i]->local_addr, text1, sizeof(text1)) << " to: " << picoquic_addr_text((sockaddr *)&cnx->path[i]->peer_addr, text2, sizeof(text2)) << std::endl;
+    }
     break;
   case picoquic_callback_path_suspended:
     std::cout << "Receiver callback: path suspended" << std::endl;

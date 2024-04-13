@@ -119,16 +119,16 @@ int sample_server_callback(picoquic_cnx_t *cnx,
     std::cout << "Server callback: stream fin. length is " << length << std::endl;
     break;
   case picoquic_callback_path_available:
-    std::cout << "Client callback: path available" << std::endl;
+    std::cout << "Server callback: path available" << std::endl;
     break;
   case picoquic_callback_path_suspended:
-    std::cout << "Client callback: path suspended" << std::endl;
+    std::cout << "Server callback: path suspended" << std::endl;
     break;
   case picoquic_callback_path_deleted:
-    std::cout << "Client callback: path deleted" << std::endl;
+    std::cout << "Server callback: path deleted" << std::endl;
     break;
   case picoquic_callback_path_quality_changed:
-    std::cout << "Client callback: path quality changed" << std::endl;
+    std::cout << "Server callback: path quality changed" << std::endl;
     break;
   case picoquic_callback_close:
     std::cout << "Server callback: connection closed" << std::endl;

@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
   std::cout << "Sender started" << std::endl;
 
   int ret = 0;
-  char *receiver_name = "192.168.188.128"; // Replace with the receiver IP address
+  char *receiver_name = "100.64.0.2"; // Replace with the receiver IP address
   int receiver_port = 12000;
   // char *recv_ip = argv[1];
   // int recv_port = atoi(argv[2]);
@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
   param->local_af = receiver_address.sin_family;
   param->dest_if = 0;
   param->socket_buffer_size = 0;
-  param->do_not_use_gso = 0;
+  param->do_not_use_gso = 1;
   int *ret_net_thread = new int;
   picoquic_network_thread_ctx_t *net_thread_ctx = picoquic_start_network_thread(quic, param, sender_loop_callback, (void *)loop_ctx, ret_net_thread);
 
@@ -302,10 +302,11 @@ int sender_app_callback(picoquic_cnx_t *cnx,
     int addr_from_is_name = 0;
     struct sockaddr_storage addr_to;
     int addr_to_is_name = 0;
+    int my_port = ntohs(((sockaddr_in *)&cnx->path[0]->local_addr)->sin_port);
 
     picoquic_enable_path_callbacks(cnx, 1);
-    picoquic_get_server_address("192.168.188.128", 12000, &addr_from, &addr_from_is_name); // remote addr
-    picoquic_get_server_address("192.168.188.131", 0, &addr_to, &addr_to_is_name);         // local addr
+    picoquic_get_server_address("100.64.0.4", 12000, &addr_from, &addr_from_is_name); // remote addr
+    picoquic_get_server_address("100.64.0.3", my_port, &addr_to, &addr_to_is_name);   // local addr
 
     int ret_probe = picoquic_probe_new_path_ex(cnx, (struct sockaddr *)&addr_from, (struct sockaddr *)&addr_to, 0, picoquic_current_time(), 0);
 
@@ -318,15 +319,23 @@ int sender_app_callback(picoquic_cnx_t *cnx,
       std::cout << "Probe failed" << std::endl;
     }
 
-    network2main_mutex.lock();
-    network2main_queue.push(picoquic_get_next_local_stream_id(cnx, 0));
-    network2main_mutex.unlock();
     break;
   }
   case picoquic_callback_path_available:
   {
-    std::cout << "Sender callback: path available" << std::endl;
+    std::cout << "Sender callback: path available: " << stream_id << std::endl;
     std::cout << "Number of paths: " << cnx->nb_paths << std::endl;
+    for (int i = 0; i < cnx->nb_paths; i++)
+    {
+      char text1[128];
+      char text2[128];
+
+      std::cout << "Path " << i << ": from: " << picoquic_addr_text((sockaddr *)&cnx->path[i]->local_addr, text1, sizeof(text1)) << " to: " << picoquic_addr_text((sockaddr *)&cnx->path[i]->peer_addr, text2, sizeof(text2)) << std::endl;
+    }
+
+    network2main_mutex.lock();
+    network2main_queue.push(picoquic_get_next_local_stream_id(cnx, 0));
+    network2main_mutex.unlock();
     break;
   }
   case picoquic_callback_path_suspended:
@@ -369,7 +378,7 @@ int sender_loop_callback(picoquic_quic_t *quic, picoquic_packet_loop_cb_enum cb_
     if (!started)
     {
       loop_ctx->stream_id_0 = picoquic_get_next_local_stream_id(loop_ctx->cnx, 0);
-      picoquic_set_stream_priority(loop_ctx->cnx, loop_ctx->stream_id_0, 1);
+      picoquic_set_stream_priority(loop_ctx->cnx, loop_ctx->stream_id_0, 0);
       std::cout << "Stream ID 0: " << loop_ctx->stream_id_0 << std::endl;
     }
     // Sending layer 0

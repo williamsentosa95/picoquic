@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
   std::cout << "Client started" << std::endl;
 
   int ret = 0;
-  char *server_name = "192.168.188.128"; // Replace with the server IP address
+  char *server_name = "100.64.0.2"; // Replace with the server IP address
   int server_port = 12000;
   picoquic_quic_t *quic = NULL;
   picoquic_cnx_t *cnx = NULL;
@@ -164,10 +164,10 @@ int sample_client_callback(picoquic_cnx_t *cnx,
       else if (client_ctx->num_of_responses == 2 * client_ctx->total_requests)
       {
         std::cout << "All requests sent" << std::endl;
-        for (auto it = client_ctx->stream_bytes_received.begin(); it != client_ctx->stream_bytes_received.end(); ++it)
-        {
-          std::cout << "Stream " << it->first << " received " << it->second << " bytes" << std::endl;
-        }
+        // for (auto it = client_ctx->stream_bytes_received.begin(); it != client_ctx->stream_bytes_received.end(); ++it)
+        // {
+        //   std::cout << "Stream " << it->first << " received " << it->second << " bytes" << std::endl;
+        // }
 
         // Write to file
         // std::ofstream file(client_ctx->output_file);
@@ -177,26 +177,33 @@ int sample_client_callback(picoquic_cnx_t *cnx,
         // }
         // file.close();
 
-        for (int i = 0; i < client_ctx->total_requests; i++)
-        {
-          std::cout << "Request " << i + 1 << std::endl;
-          std::cout << (client_ctx->end_times[i] - client_ctx->start_times[i]) / 1000000.0 << " ms" << std::endl;
-          std::cout << (client_ctx->end_times2[i] - client_ctx->start_times[i]) / 1000000.0 << " ms" << std::endl
-                    << std::endl;
-        }
+        // for (int i = 0; i < client_ctx->total_requests; i++)
+        // {
+        //   std::cout << "Request " << i + 1 << std::endl;
+        //   std::cout << (client_ctx->end_times[i] - client_ctx->start_times[i]) / 1000000.0 << " ms" << std::endl;
+        //   std::cout << (client_ctx->end_times2[i] - client_ctx->start_times[i]) / 1000000.0 << " ms" << std::endl
+        //             << std::endl;
+        // }
 
-        for(auto& it: client_ctx->stream_rtt)
+        for (auto &it : client_ctx->stream_rtt)
         {
           std::cout << "Stream " << it.first << " RTT: " << it.second << " ms" << std::endl;
+        }
+
+        std::cout << "Number of paths: " << cnx->nb_paths << std::endl;
+        for (int i = 0; i < cnx->nb_paths; i++)
+        {
+          char text1[128];
+          char text2[128];
+
+          std::cout << "Path " << i << ": from: " << picoquic_addr_text((sockaddr *)&cnx->path[i]->local_addr, text1, sizeof(text1)) << " to: " << picoquic_addr_text((sockaddr *)&cnx->path[i]->peer_addr, text2, sizeof(text2)) << std::endl;
         }
 
         delete[] client_ctx->start_times;
         delete[] client_ctx->end_times;
         delete[] client_ctx->end_times2;
         delete client_ctx;
-        // picoquic_close(cnx, 0);
-        // picoquic_free(cnx->quic);
-        // exit(0);
+        exit(0);
       }
     }
 
@@ -213,10 +220,10 @@ int sample_client_callback(picoquic_cnx_t *cnx,
     int addr_from_is_name = 0;
     struct sockaddr_storage addr_to;
     int addr_to_is_name = 0;
+    int my_port = ntohs(((sockaddr_in *)&cnx->path[0]->local_addr)->sin_port);
 
-    picoquic_enable_path_callbacks(cnx, 1);
-    picoquic_get_server_address("192.168.188.128", 12000, &addr_from, &addr_from_is_name); // remote addr
-    picoquic_get_server_address("192.168.188.131", 0, &addr_to, &addr_to_is_name);         // local addr
+    picoquic_get_server_address("100.64.0.4", 12000, &addr_from, &addr_from_is_name); // remote addr
+    picoquic_get_server_address("100.64.0.3", my_port, &addr_to, &addr_to_is_name);   // local addr
 
     int ret_probe = picoquic_probe_new_path_ex(cnx, (struct sockaddr *)&addr_from, (struct sockaddr *)&addr_to, 0, picoquic_current_time(), 0);
 
@@ -229,6 +236,11 @@ int sample_client_callback(picoquic_cnx_t *cnx,
       std::cout << "Probe failed" << std::endl;
     }
 
+    break;
+  }
+  case picoquic_callback_path_available:
+  {
+    std::cout << "Client callback: path available" << std::endl;
     std::cout << "Sending request" << std::endl;
 
     int is_unidir = 0;
@@ -240,26 +252,6 @@ int sample_client_callback(picoquic_cnx_t *cnx,
     // Send some data
     picoquic_add_to_stream(cnx, stream_id, (const uint8_t *)client_ctx->request_msg.c_str(), client_ctx->request_msg.length(), 0);
     client_ctx->requests_sent++;
-
-    break;
-  }
-  case picoquic_callback_path_available:
-  {
-    std::cout << "Client callback: path available" << std::endl;
-    // std::string a(1000000, 'a');
-    // picoquic_add_to_stream(cnx, stream_id, (uint8_t *)a.c_str(), a.length(), 0);
-    // std::cout << "Sending request" << std::endl;
-
-    // int is_unidir = 0;
-    // uint64_t stream_id = picoquic_get_next_local_stream_id(cnx, is_unidir);
-
-    // // Timestamp
-    // client_ctx->start_timestamp = std::chrono::high_resolution_clock::now();
-
-    // // Send some data
-    // picoquic_add_to_stream(cnx, stream_id, (const uint8_t *)client_ctx->request_msg.c_str(), client_ctx->request_msg.length(), 0);
-    // client_ctx->requests_sent++;
-
     break;
   }
   case picoquic_callback_path_suspended:
