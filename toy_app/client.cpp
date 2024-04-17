@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
   }
 
   int ret = 0;
-  char *server_name = "100.64.0.2";
+  char *server_name = "100.64.0.1";
   int server_port = 12000;
   picoquic_quic_t *quic = NULL;
   picoquic_cnx_t *cnx = NULL;
@@ -174,13 +174,13 @@ int sample_client_callback(picoquic_cnx_t *cnx,
     if (client_ctx->current_request_bytes_received == client_ctx->bytes_requested)
     {
       client_ctx->end_timestamp = std::chrono::high_resolution_clock::now();
-      // client_ctx->time_taken[client_ctx->requests_sent - 1] = std::chrono::duration_cast<std::chrono::microseconds>(client_ctx->end_timestamp - client_ctx->start_timestamp).count();
-      client_ctx->start_times[client_ctx->requests_sent - 1] = client_ctx->start_timestamp.time_since_epoch().count();
-      client_ctx->end_times[client_ctx->requests_sent - 1] = client_ctx->end_timestamp.time_since_epoch().count();
-      // std::cout << "Received " << client_ctx->current_request_bytes_received << " bytes" << std::endl
-      //           << "Request " << client_ctx->requests_sent << " completed" << std::endl
-      //           << "Took " << client_ctx->time_taken[client_ctx->requests_sent - 1] << " microseconds" << std::endl;
+      int req_id = client_ctx->requests_sent - 1;
+      client_ctx->start_times[req_id] = client_ctx->start_timestamp.time_since_epoch().count();
+      client_ctx->end_times[req_id] = client_ctx->end_timestamp.time_since_epoch().count();
+      float duration = (client_ctx->end_times[req_id] - client_ctx->start_times[req_id]) / 1e6;
       client_ctx->current_request_bytes_received = 0;
+
+      std::cout << "ID " << req_id << ", duration = " << duration << " ms" << std::endl;
 
       if (client_ctx->requests_sent < client_ctx->total_requests)
       {
@@ -204,11 +204,15 @@ int sample_client_callback(picoquic_cnx_t *cnx,
           file << "request_send_timestamp, response_receive_timestamp" << std::endl;
         }
 
+        float total_duration = 0;
         for (int i = 0; i < client_ctx->total_requests; i++)
         {
           file << client_ctx->start_times[i] << "," << client_ctx->end_times[i] << std::endl;
+          total_duration += (client_ctx->end_times[i] - client_ctx->start_times[i]) / 1e6;
           // std::cout << client_ctx->time_taken[i] << " microseconds" << std::endl;
         }
+        std::cout << "Average = " << total_duration / client_ctx->total_requests << " ms" << std::endl;
+
         file.close();
 
         // delete[] client_ctx->time_taken;
