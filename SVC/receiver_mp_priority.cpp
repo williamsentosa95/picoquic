@@ -17,22 +17,25 @@ std::queue<int> queue_1_2;
 std::mutex queue_mutex_0;
 std::mutex queue_mutex_1_2;
 
-struct MsgInfo
+struct StreamInfo
 {
   uint32_t msg_no;
   uint32_t msg_size;
-  size_t bytes_received;
-  MsgInfo()
+  size_t msg_bytes_received;
+  char buffer[8];
+  uint32_t buffer_len;
+  StreamInfo()
   {
     this->msg_no = 0;
     this->msg_size = 0;
-    this->bytes_received = 0;
+    this->msg_bytes_received = 0;
+    this->buffer_len = 0;
   }
 };
 
 typedef struct st_receiver_app_ctx_t
 {
-  std::map<uint64_t, MsgInfo> msg_info;
+  std::map<uint64_t, StreamInfo> stream_info;
 } receiver_app_ctx_t;
 
 int receiver_app_callback(picoquic_cnx_t *cnx,
@@ -43,30 +46,29 @@ void render_frames();
 
 int main(int argc, char **argv)
 {
-  // if (((4 != argc) || (0 == atoi(argv[1])) || (0 == atoi(argv[2]))) || (0 == atoi(argv[3])))
-  // {
-  //   std::cout << "usage: appserver server_port timeout(s) wait_perod(ms)" << endl;
-  //   return 0;
-  // }
+  if (((3 != argc) || (0 == atoi(argv[1])) || (0 == atoi(argv[2]))))
+  {
+    std::cout << "usage: ./receiver timeout(s) wait_perod(ms) " << std::endl;
+    return 0;
+  }
   std::cout << "Receiver started" << std::endl;
 
   // int port = atoi(argv[1]);
-  // timeout = atoi(argv[2]);
+  timeout = atoi(argv[1]);
+  wait_period = atoi(argv[2]);
   // wait_period = atoi(argv[3]);
-  wait_period = 60;
+  // wait_period = 60;
   // initial_port = port;
 
   int ret = 0;
   int server_port = 12000;
-  const char *server_cert = "./toy_app/ca-cert.pem";
-  const char *server_key = "./toy_app/server-key.pem";
+  const char *server_cert = "./ca-cert.pem";
+  const char *server_key = "./server-key.pem";
   char *default_alpn = "my_custom_alpn";
   uint64_t current_time = picoquic_current_time();
 
   // Server app context
   receiver_app_ctx_t *receiver_ctx = new receiver_app_ctx_t();
-  // receiver_ctx->msg_info_high_priority_stream.msg_data = buffer0;
-  // receiver_ctx->msg_info_low_priority_stream.msg_data = buffer1;
 
   // Create a quic context
   picoquic_quic_t *quic = picoquic_create(10, server_cert, server_key, NULL, default_alpn, receiver_app_callback, receiver_ctx,
@@ -109,7 +111,8 @@ int main(int argc, char **argv)
   // }
 
   render_frames();
-
+  
+  sleep(5);
   picoquic_delete_network_thread(net_thread_ctx);
 
   /* Clean up */
@@ -134,54 +137,83 @@ int receiver_app_callback(picoquic_cnx_t *cnx,
   {
   case picoquic_callback_stream_data: // Data received from peer on stream N
   {
-    if (receiver_ctx->msg_info.count(stream_id) == 0)
+    if (receiver_ctx->stream_info.count(stream_id) == 0)
     {
-      receiver_ctx->msg_info[stream_id] = MsgInfo();
+      receiver_ctx->stream_info[stream_id] = StreamInfo();
     }
-    MsgInfo &msg = receiver_ctx->msg_info[stream_id];
-    // std::cout << "Data received. len: " << length << std::endl;
+    StreamInfo &stream = receiver_ctx->stream_info[stream_id];
+    // std::cout << "Data received. Stream:" << stream_id << " len: " << length << std::endl;
+
+    uint8_t *buffer = nullptr;
+    if (stream.buffer_len > 0)
+    {
+      buffer = new uint8_t[stream.buffer_len + length];
+      memcpy(buffer, stream.buffer, stream.buffer_len);
+      memcpy(buffer + stream.buffer_len, bytes, length);
+      length += stream.buffer_len;
+      bytes = buffer;
+      stream.buffer_len = 0;
+    }
 
     while (length > 0)
     {
-      if (msg.bytes_received == 0)
+      if (stream.msg_bytes_received == 0)
       {
-        msg.msg_no = *(uint32_t *)bytes;
-        msg.msg_size = *(uint32_t *)&bytes[4];
+        if (length < 8)
+        {
+          memcpy(stream.buffer, bytes, length);
+          stream.buffer_len = length;
+          break;
+        }
+
+        stream.msg_no = *(uint32_t *)bytes;
+        stream.msg_size = *(uint32_t *)&bytes[4];
+        // std::cout << "got new msg_no: " << stream.msg_no << " size: " << stream.msg_size << " recvd: " << stream.msg_bytes_received << std::endl;
         length -= 8; // size of custom header
         bytes += 8;  // size of custom header
       }
 
-      if (msg.bytes_received + length <= msg.msg_size)
+      if (stream.msg_bytes_received + length <= stream.msg_size)
       {
-        msg.bytes_received += length;
+        stream.msg_bytes_received += length;
         length = 0;
       }
       else
       {
-        int remaining = msg.msg_size - msg.bytes_received;
-        msg.bytes_received = msg.msg_size;
+        int remaining = stream.msg_size - stream.msg_bytes_received;
+        // std::cout << "Got remaining: msg_no:" << stream.msg_no << " size: " << stream.msg_size << " recved: " << stream.msg_bytes_received << std::endl;
+        stream.msg_bytes_received = stream.msg_size;
         length -= remaining;
         bytes += remaining;
       }
 
-      if (msg.bytes_received == msg.msg_size)
+      if (stream.msg_bytes_received == stream.msg_size)
       {
-        std::cout << "Received message no: " << msg.msg_no << " size: " << msg.msg_size << std::endl;
-        if (msg.msg_no % 3 != 0)
+        int64_t ts = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        std::fprintf(stdout, "recv_msg msg_no: %d ts_recv: %lu size: %d\n",
+                     stream.msg_no,
+                     ts,
+                     stream.msg_size);
+        if (stream.msg_no % 3 == 0)
         {
-          queue_mutex_1_2.lock();
-          queue_1_2.push(msg.msg_no);
-          queue_mutex_1_2.unlock();
+          queue_mutex_0.lock();
+          queue_0.push(stream.msg_no);
+          queue_mutex_0.unlock();
         }
         else
         {
-          queue_mutex_0.lock();
-          queue_0.push(msg.msg_no);
-          queue_mutex_0.unlock();
+          queue_mutex_1_2.lock();
+          queue_1_2.push(stream.msg_no);
+          queue_mutex_1_2.unlock();
         }
 
-        msg.bytes_received = 0;
+        stream.msg_bytes_received = 0;
       }
+    }
+
+    if (buffer != nullptr)
+    {
+      delete[] buffer;
     }
   }
   break;
@@ -235,7 +267,7 @@ void render_frames()
   std::map<int, int> ahead_layer_1; // frame_no, msg_no
   std::map<int, int> ahead_layer_2; // frame_no, msg_no
 
-  while (true)
+  while (rendered_frame_no < timeout * 30 - 1)
   {
 
     // Check if layer 0 already received. Otherwise, get it from queue

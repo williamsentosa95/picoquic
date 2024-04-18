@@ -66,11 +66,11 @@ int sender_loop_callback(picoquic_quic_t *quic, picoquic_packet_loop_cb_enum cb_
 
 int main(int argc, char *argv[])
 {
-  // if ((5 != argc) || (0 == atoi(argv[2])) || (0 == atoi(argv[4])))
-  // {
-  //   std::cout << "usage: sender receiver_ip receiver_port trace_file timeout(s)" << std::endl;
-  //   return 0;
-  // }
+  if ((3 != argc) || (0 == atoi(argv[2])))
+  {
+    std::cout << "usage: ./sender_mp trace_file timeout(s)" << std::endl;
+    return 0;
+  }
 
   std::cout << "Sender started" << std::endl;
 
@@ -80,6 +80,7 @@ int main(int argc, char *argv[])
   // char *recv_ip = argv[1];
   // int recv_port = atoi(argv[2]);
   // int timeout = atoi(argv[4]);
+  int timeout = atoi(argv[2]);
 
   picoquic_quic_t *quic = NULL;
   picoquic_cnx_t *cnx = NULL;
@@ -179,14 +180,17 @@ int main(int argc, char *argv[])
     network2main_mutex.unlock();
   }
 
+  sleep(2);
+
   FrameInfo msg;
   int gop_size = 0;
   int num_layers = 3;
   int max_bitrate = 0;
 
   std::map<int, std::vector<FrameInfo>> trace_arrays;
+  std::ifstream ifs(argv[1]);
   // std::ifstream ifs(argv[3]);
-  std::ifstream ifs("SVC/12000_custom.trace");
+  // std::ifstream ifs("SVC/12000_custom.trace");
   ifs >> gop_size >> num_layers;
   while (ifs >> max_bitrate >>
          msg.msg_id_ >>
@@ -223,8 +227,8 @@ int main(int argc, char *argv[])
   // key_trace = 16071;
   // key_trace = 1285;
 
-  // while (frame_no < (uint32_t)30 * timeout)
-  while (frame_no < 10)
+  while (frame_no < (uint32_t)30 * timeout)
+  // while (frame_no < 10)
   {
     main2network_mutex.lock();
     for (int i = 0; i < num_layers; i++)
@@ -268,6 +272,7 @@ int main(int argc, char *argv[])
     }
   }
 
+  sleep(5);
   picoquic_delete_network_thread(net_thread_ctx);
 
   /* Clean up */
@@ -371,9 +376,9 @@ int sender_loop_callback(picoquic_quic_t *quic, picoquic_packet_loop_cb_enum cb_
     break;
   case picoquic_packet_loop_wake_up:
 
-    uint64_t ts = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    fprintf(stdout, "picoquic: ts_send: %lu\n",
-            ts);
+    // uint64_t ts = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    // fprintf(stdout, "picoquic: ts_send: %lu\n",
+    //         ts);
     main2network_mutex.lock();
     if (!started)
     {
