@@ -430,18 +430,18 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
     set_picoquic_compile_settings(client_toy_mp)
 
     # Added by Talal
-    add_executable(sender_mp
-    SVC/sender_mp.cpp)
-    target_link_libraries(sender_mp PRIVATE picoquic-log picoquic-core)
-    target_include_directories(sender_mp PRIVATE loglib picoquic)
-    set_picoquic_compile_settings(sender_mp)
+    add_executable(sender_mp_priority
+    SVC/sender_mp_priority.cpp)
+    target_link_libraries(sender_mp_priority PRIVATE picoquic-log picoquic-core)
+    target_include_directories(sender_mp_priority PRIVATE loglib picoquic)
+    set_picoquic_compile_settings(sender_mp_priority)
 
     # Added by Talal
-    add_executable(receiver_mp
-    SVC/receiver_mp.cpp)
-    target_link_libraries(receiver_mp PRIVATE picoquic-log picoquic-core)
-    target_include_directories(receiver_mp PRIVATE loglib picoquic)
-    set_picoquic_compile_settings(receiver_mp)
+    add_executable(receiver_mp_priority
+    SVC/receiver_mp_priority.cpp)
+    target_link_libraries(receiver_mp_priority PRIVATE picoquic-log picoquic-core)
+    target_include_directories(receiver_mp_priority PRIVATE loglib picoquic)
+    set_picoquic_compile_settings(receiver_mp_priority)
 
 endif()
 
