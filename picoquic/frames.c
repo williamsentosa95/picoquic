@@ -1040,7 +1040,7 @@ static void picoquic_stream_data_chunk_callback(picoquic_cnx_t* cnx, picoquic_st
     }
 }
 
-void picoquic_stream_data_callback(picoquic_cnx_t* cnx, picoquic_stream_head_t* stream)
+void picoquic_stream_data_callback(picoquic_cnx_t* cnx, picoquic_stream_head_t* stream, uint64_t current_time)
 {
     picoquic_stream_data_node_t* data;
 
@@ -1048,6 +1048,7 @@ void picoquic_stream_data_callback(picoquic_cnx_t* cnx, picoquic_stream_head_t* 
         size_t start = (size_t)(stream->consumed_offset - data->offset);
         if (data->length >= start) {
             size_t data_length = data->length - start;
+            // printf("%d-emit from queue-offset=%d\n", current_time, data->offset);
             picoquic_stream_data_chunk_callback(cnx, stream, data->bytes + start, data_length);
         }
         picosplay_delete_hint(&stream->stream_data_tree, &data->stream_data_node);
@@ -1210,18 +1211,18 @@ static int picoquic_stream_network_input(picoquic_cnx_t* cnx, uint64_t stream_id
                 /* Arrival of in sequence bytes */
                 uint64_t delivered_index = stream->consumed_offset - offset;
                 uint64_t data_length = length - delivered_index;
-
+                // printf("%d-output-offset=%d\n", current_time, offset);
                 /* Ugly cast, but the callback requires a non-const pointer */
                 picoquic_stream_data_chunk_callback(cnx, stream, (uint8_t *)bytes + delivered_index, (size_t)data_length);
                 /* Adjust the tree if needed */
-                picoquic_stream_data_callback(cnx, stream);
+                picoquic_stream_data_callback(cnx, stream, current_time);
             }
             else {
                 /* Nothing to do with these incoming data, they are duplicate */
             }
         } else {
             int new_data_available = 0;
-
+            // printf("%d-queued-offset=%d\n", current_time, offset);
             ret = picoquic_queue_network_input(cnx->quic, &stream->stream_data_tree, stream->consumed_offset,
                 offset, bytes, length, received_data, &new_data_available);
             if (ret != 0) {
@@ -1234,7 +1235,7 @@ static int picoquic_stream_network_input(picoquic_cnx_t* cnx, uint64_t stream_id
 
             if (ret == 0 && should_notify != 0 && cnx->callback_fn != NULL) {
                 /* check how much data there is to send */
-                picoquic_stream_data_callback(cnx, stream);
+                picoquic_stream_data_callback(cnx, stream, current_time);
             }
         }
     }
@@ -5792,10 +5793,10 @@ int picoquic_decode_frames(picoquic_cnx_t* cnx, picoquic_path_t * path_x, const 
                 bytes = NULL;
                 break;
             }
-
+            char text1[128];
+            // printf("%d-Frame from %s-size=%d\n", current_time, picoquic_addr_text((struct sockaddr *) &path_x->local_addr, text1, sizeof(text1)), bytes_maxsize);
             bytes = picoquic_decode_stream_frame(cnx, bytes, bytes_max, received_data, current_time);
             ack_needed = 1;
-
         }
         else if (first_byte == picoquic_frame_type_ack) {
             if (epoch == picoquic_epoch_0rtt) {
@@ -5932,8 +5933,8 @@ int picoquic_decode_frames(picoquic_cnx_t* cnx, picoquic_path_t * path_x, const 
             default: {
                 uint64_t frame_id64;
                 const uint8_t* bytes0 = bytes;
-
                 if ((bytes = picoquic_frames_varint_decode(bytes, bytes_max, &frame_id64)) != NULL) {
+                    // printf("Decode frame: frame_id=%d, psize=%d\n", frame_id64, bytes_maxsize);
                     switch (frame_id64) {
                     case picoquic_frame_type_ack_frequency:
                         bytes = picoquic_decode_ack_frequency_frame(bytes, bytes_max, cnx);

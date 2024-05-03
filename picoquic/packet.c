@@ -2763,6 +2763,12 @@ int picoquic_incoming_segment(
         picoquic_stream_data_node_recycle(decrypted_data);
     }
 
+    // char text[128];
+    // char* src_addr;
+    // if (ph.ptype == picoquic_packet_1rtt_protected && ph.payload_length > 0) {
+    //     printf("recv to %s: pn=%d, data_offset=%d, payload_size=%d\n", picoquic_addr_text(addr_to, text, sizeof(text)), ph.pn, decrypted_data->offset, ph.payload_length);
+    // }
+
     return ret;
 }
 

@@ -3171,6 +3171,8 @@ static uint8_t* picoquic_prepare_stream_and_datagrams(picoquic_cnx_t* cnx, picoq
     int more_data_this_round = 0;
     int is_first_round = 1;
 
+    
+
     while (bytes_next + 8 < bytes_max && *ret == 0) {
         /* Find the highest priority level for which there is something to send, then
         * format the frames to send at that level. Repeat in a loop until the
@@ -3183,6 +3185,12 @@ static uint8_t* picoquic_prepare_stream_and_datagrams(picoquic_cnx_t* cnx, picoq
         uint64_t stream_priority = UINT64_MAX;
         int something_sent = 0;
         int conflict_found = 0;
+
+        // char text1[128];
+        // if (first_stream != NULL) {
+        //     printf("Send from stream!, path %s, offset=%d\n", picoquic_addr_text((struct sockaddr *) &path_x->peer_addr, text1, sizeof(text1)), first_stream->send_queue->offset);
+        // }
+        
 
         more_data_this_round = 0;
 
@@ -4351,21 +4359,27 @@ static int picoquic_select_next_path_mp(picoquic_cnx_t* cnx, uint64_t current_ti
 
     if (challenge_path >= 0) {
         path_id = challenge_path;
+        //printf("path_id %d: challenge_path\n", path_id);
     }
     else if (is_ack_needed && is_min_rtt_pacing_ok) {
         path_id = i_min_rtt;
+        //printf("path_id %d: min_rtt\n", path_id);
     }
     else if (data_path_cwin >= 0) {
         /* if there is a path ready to send the most urgent data, select it */
         if (affinity_path_id >= 0) {
             path_id = affinity_path_id;
+            //printf("path_id %d: affinity_path\n", path_id);
         }
         else {
             path_id = data_path_cwin;
+            //printf("%d-path %d is selected-cwin=%d-bytes_in_transit=%d\n", current_time, path_id, cnx->path[path_id]->cwin, cnx->path[path_id]->bytes_in_transit);
+            //printf("path_id %d: data_path_cwin\n", path_id);
         }
     }
     else if (data_path_pacing >= 0) {
         path_id = data_path_pacing;
+        //printf("path_id %d: data_path_pacing\n", path_id);
     }
     else {
         uint64_t path_wake_time = pacing_time_next;
@@ -4377,6 +4391,7 @@ static int picoquic_select_next_path_mp(picoquic_cnx_t* cnx, uint64_t current_ti
             SET_LAST_WAKE(cnx->quic, PICOQUIC_SENDER);
         }
         path_id = 0;
+        //printf("path_id: default to 0\n");
     }
     if (cnx->path[path_id]->path_is_standby && challenge_path != path_id) {
         /* Set the selected path to available if it was standby. Selecting a standby
@@ -4644,8 +4659,14 @@ int picoquic_prepare_packet_ex(picoquic_cnx_t* cnx,
         if (*send_length > 0) {
             cnx->nb_trains_sent++;
         }
+        // if (packet->ptype == picoquic_packet_1rtt_protected) {
+        //     printf("%.4f - path_id=%d seq=%d size=%d offset=%d\n", current_time/1e6, path_id, packet->sequence_number, packet->length, packet->bytes);
+        // }
+        // if (*send_length > 0) {
+        //     printf("%.4f - Path %d: %.2f Mbps %.2f Mbps %.2f ms\n", current_time/1e6, path_id, cnx->path[path_id]->bandwidth_estimate * 8 / 1e6, cnx->path[path_id]->bandwidth_estimate_max * 8 / 1e6, cnx->path[path_id]->rtt_min / 1e3);
+        // }
     }
-
+    
     picoquic_reinsert_by_wake_time(cnx->quic, cnx, next_wake_time);
 
     return ret;
