@@ -611,18 +611,24 @@ int picoquic_demo_server_callback(picoquic_cnx_t* cnx,
         alpn_code = picoquic_parse_alpn(alpn);
     }
 
+    printf("Callback is called!\n");
+
     switch (alpn_code) {
     case picoquic_alpn_http_3:
+        printf("Get HTTP3 connection!\n");
         ret = h3zero_callback(cnx, stream_id, bytes, length, fin_or_event, callback_ctx, v_stream_ctx);
         break;
     case picoquic_alpn_siduck:
+        printf("Get siduck connection!\n");
         ret = siduck_callback(cnx, stream_id, bytes, length, fin_or_event, callback_ctx, v_stream_ctx);
         break;
     case picoquic_alpn_quicperf:
+        printf("Get quicperf connection!\n");
         ret = quicperf_callback(cnx, stream_id, bytes, length, fin_or_event, callback_ctx, v_stream_ctx);
         break;
     case picoquic_alpn_http_0_9:
     default:
+        printf("Get h09 connection!\n");
         ret = picoquic_h09_server_callback(cnx, stream_id, bytes, length, fin_or_event, callback_ctx, v_stream_ctx);
         break;
     }

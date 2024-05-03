@@ -941,6 +941,7 @@ int h3zero_process_request_frame(
 		if (h3zero_server_parse_path(stream_ctx->ps.stream_state.header.path, stream_ctx->ps.stream_state.header.path_length,
 			&stream_ctx->echo_length, &stream_ctx->file_path, app_ctx->web_folder, &file_error) != 0) {
 			char log_text[256];
+			printf("Process GET 2 request!!!\n");
 			picoquic_log_app_message(cnx, "Cannot find file for path: <%s> in folder <%s>, error: 0x%x",
 				picoquic_uint8_to_str(log_text, 256, stream_ctx->ps.stream_state.header.path, stream_ctx->ps.stream_state.header.path_length),
 				(app_ctx->web_folder == NULL) ? "NULL" : app_ctx->web_folder, file_error);
@@ -951,6 +952,7 @@ int h3zero_process_request_frame(
 		else {
 			response_length = (stream_ctx->echo_length == 0) ?
 				strlen(h3zero_server_default_page) : stream_ctx->echo_length;
+			printf("Process GET request!!!\n");
 			o_bytes = h3zero_create_response_header_frame(o_bytes, o_bytes_max,
 				(stream_ctx->echo_length == 0) ? h3zero_content_type_text_html :
 				h3zero_content_type_text_plain);
@@ -995,6 +997,7 @@ int h3zero_process_request_frame(
 					stream_ctx, app_ctx->path_table[path_item].path_app_ctx) != 0) {
 					/* This callback is not supported */
 					picoquic_log_app_message(cnx, "Unsupported callback on stream: %"PRIu64 ", path:%s", stream_ctx->stream_id, app_ctx->path_table[path_item].path);
+					printf("Unsupported callback on stream: %"PRIu64 ", path:%s\n", stream_ctx->stream_id, app_ctx->path_table[path_item].path);
 					o_bytes = h3zero_create_error_frame(o_bytes, o_bytes_max, "501", H3ZERO_USER_AGENT_STRING);
 				}
 				else {
@@ -1020,6 +1023,7 @@ int h3zero_process_request_frame(
 	}
 	else
 	{
+		printf("UNSUPPORTED!!\n");
 		/* unsupported method */
 		picoquic_log_app_message(cnx, "Unsupported method on stream: %"PRIu64, stream_ctx->stream_id);
 		o_bytes = h3zero_create_error_frame(o_bytes, o_bytes_max, "501", H3ZERO_USER_AGENT_STRING);
