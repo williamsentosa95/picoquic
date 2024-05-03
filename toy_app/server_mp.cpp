@@ -4,6 +4,7 @@
 #include <cmath>
 #include <chrono>
 #include <fstream>
+#include <autoqlog.h>
 
 std::string msg(1000000000, 'a');
 
@@ -34,6 +35,7 @@ int main(int argc, char **argv)
   char *default_alpn = "my_custom_alpn";
   // char *default_alpn = "application layer protocol";
   uint64_t current_time = picoquic_current_time();
+  char* qlog_dir = "/home/william/qlog";
 
   // Server app context
   // server_app_ctx_t *server_ctx = new server_app_ctx_t();
@@ -93,43 +95,18 @@ int sample_server_callback(picoquic_cnx_t *cnx,
   switch (fin_or_event)
   {
   case picoquic_callback_stream_data: // Data received from peer on stream N
-  {
-    // std::cout << "Server callback: stream data. length is " << length << std::endl;
-    std::string data = std::string((char *)bytes, length);
-
-    // Send a response
-    long num_bytes = strtol(data.c_str(), NULL, 10);
-    // std::cout << "Requested size is " << num_bytes << std::endl;
-    // server_ctx->send_times[server_ctx->response_count] = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-    picoquic_add_to_stream(cnx, stream_id, (uint8_t *)msg.c_str(), num_bytes, 0);
-    // std::cout << "Server callback: response sent" << std::endl;
-    // server_ctx->response_count++;
-    // if (server_ctx->response_count == server_ctx->total_requests)
-    // {
-    //   std::cout << "Server callback: all responses sent" << std::endl;
-
-    //   std::ofstream file(server_ctx->output_file);
-    //   if (file.is_open())
-    //   {
-    //     file << "response_send_timestamp" << std::endl;
-    //   }
-
-    //   std::cout << "time" << std::endl;
-    //   for (int i = 0; i < server_ctx->total_requests; i++)
-    //   {
-    //     file << server_ctx->send_times[i] << std::endl;
-    //   }
-    //   file.close();
-
-    //   delete[] server_ctx->send_times;
-    //   delete server_ctx;
-    //   exit(0);
-    // }
-  }
-  break;
+    {
+      std::cout << "Server callback: stream data, length=" << length << std::endl;
+      std::string data = std::string((char *)bytes, length);
+      long num_bytes = strtol(data.c_str(), NULL, 10);
+      picoquic_add_to_stream(cnx, stream_id, (uint8_t *)msg.c_str(), num_bytes, 0);
+      break;
+    }
   case picoquic_callback_stream_fin: // Fin received from peer on stream N; data is optional
-    std::cout << "Server callback: stream fin. length is " << length << std::endl;
-    break;
+    {
+      std::cout << "Server callback: stream fin. length is " << length << std::endl;
+      break;
+    }
   case picoquic_callback_path_available:
     std::cout << "Server callback: path available" << std::endl;
     break;
@@ -146,7 +123,7 @@ int sample_server_callback(picoquic_cnx_t *cnx,
     std::cout << "Server callback: connection closed" << std::endl;
     break;
   default:
-    // std::cout << "Server callback: unknown event " << fin_or_event << std::endl;
+    std::cout << "Server callback: unknown event " << fin_or_event << std::endl;
     break;
   }
 

@@ -156,74 +156,80 @@ int sample_client_callback(picoquic_cnx_t *cnx,
   case picoquic_callback_stream_data: // Data received from peer on stream N
     // std::cout << "Client callback: stream data. length is " << length << std::endl;
     // std::cout << "Data: " << std::string((char *)bytes, length) << std::endl;
-
-    // Store the response and if it's the end, send another request
-    if (client_ctx->current_request_bytes_received == 0)
     {
-      // client_ctx->responses.push_back(std::string((char *)bytes, length));
-      client_ctx->current_request_bytes_received += length;
-      client_ctx->total_bytes_received += length;
-    }
-    else
-    {
-      // client_ctx->responses.back() += std::string((char *)bytes, length);
-      client_ctx->current_request_bytes_received += length;
-      client_ctx->total_bytes_received += length;
-    }
-
-    if (client_ctx->current_request_bytes_received == client_ctx->bytes_requested)
-    {
-      client_ctx->end_timestamp = std::chrono::high_resolution_clock::now();
-      int req_id = client_ctx->requests_sent - 1;
-      client_ctx->start_times[req_id] = client_ctx->start_timestamp.time_since_epoch().count();
-      client_ctx->end_times[req_id] = client_ctx->end_timestamp.time_since_epoch().count();
-      float duration = (client_ctx->end_times[req_id] - client_ctx->start_times[req_id]) / 1e6;
-      client_ctx->current_request_bytes_received = 0;
-
-      std::cout << "ID " << req_id << ", duration = " << duration << " ms" << std::endl;
-
-      if (client_ctx->requests_sent < client_ctx->total_requests)
+      // std::chrono::time_point<std::chrono::system_clock> time_now = std::chrono::high_resolution_clock::now();
+      // float now_ms = (time_now.time_since_epoch().count() - client_ctx->start_timestamp.time_since_epoch().count()) / 1e6;
+      // Store the response and if it's the end, send another request
+      if (client_ctx->current_request_bytes_received == 0)
       {
-        // std::cout << "Sending another request" << std::endl;
-        client_ctx->start_timestamp = std::chrono::high_resolution_clock::now();
-        picoquic_add_to_stream(cnx, stream_id, (const uint8_t *)client_ctx->request_msg.c_str(), client_ctx->request_msg.length(), 0);
-        client_ctx->requests_sent++;
+        // client_ctx->responses.push_back(std::string((char *)bytes, length));
+        client_ctx->current_request_bytes_received += length;
+        client_ctx->total_bytes_received += length;
       }
       else
       {
-        // std::cout << "All requests sent" << std::endl;
-        // for (auto &response : client_ctx->responses)
-        // {
-        //   std::cout << "Response: " << response.length() << std::endl;
-        // }
-
-        // Write to file
-        std::ofstream file(client_ctx->output_file);
-        if (file.is_open())
-        {
-          file << "request_send_timestamp, response_receive_timestamp" << std::endl;
-        }
-
-        float total_duration = 0;
-        for (int i = 0; i < client_ctx->total_requests; i++)
-        {
-          file << client_ctx->start_times[i] << "," << client_ctx->end_times[i] << std::endl;
-          total_duration += (client_ctx->end_times[i] - client_ctx->start_times[i]) / 1e6;
-          // std::cout << client_ctx->time_taken[i] << " microseconds" << std::endl;
-        }
-        std::cout << "Average = " << total_duration / client_ctx->total_requests << " ms" << std::endl;
-
-        file.close();
-
-        // delete[] client_ctx->time_taken;
-        delete[] client_ctx->start_times;
-        delete[] client_ctx->end_times;
-        delete client_ctx;
-        exit(0);
+        // client_ctx->responses.back() += std::string((char *)bytes, length);
+        client_ctx->current_request_bytes_received += length;
+        client_ctx->total_bytes_received += length;
       }
-    }
 
-    break;
+      if (client_ctx->current_request_bytes_received == client_ctx->bytes_requested)
+      {
+        client_ctx->end_timestamp = std::chrono::high_resolution_clock::now();
+        int req_id = client_ctx->requests_sent - 1;
+        client_ctx->start_times[req_id] = client_ctx->start_timestamp.time_since_epoch().count();
+        client_ctx->end_times[req_id] = client_ctx->end_timestamp.time_since_epoch().count();
+        float duration = (client_ctx->end_times[req_id] - client_ctx->start_times[req_id]) / 1e6;
+        client_ctx->current_request_bytes_received = 0;
+
+        std::cout << "ID " << req_id << ", duration = " << duration << " ms" << std::endl;
+
+        if (client_ctx->requests_sent < client_ctx->total_requests)
+        {
+          // std::cout << "Sending another request" << std::endl;
+          client_ctx->start_timestamp = std::chrono::high_resolution_clock::now();
+          picoquic_add_to_stream(cnx, stream_id, (const uint8_t *)client_ctx->request_msg.c_str(), client_ctx->request_msg.length(), 0);
+          client_ctx->requests_sent++;
+        }
+        else
+        {
+          // std::cout << "All requests sent" << std::endl;
+          // for (auto &response : client_ctx->responses)
+          // {
+          //   std::cout << "Response: " << response.length() << std::endl;
+          // }
+
+          // Write to file
+          std::ofstream file(client_ctx->output_file);
+          if (file.is_open())
+          {
+            file << "duration_ms" << std::endl;
+          }
+
+          float total_duration = 0;
+          float duration = 0;
+          for (int i = 0; i < client_ctx->total_requests; i++)
+          {
+            duration = (client_ctx->end_times[i] - client_ctx->start_times[i]) / 1e6;
+            total_duration += duration;
+            file << duration << std::endl;
+            std::cout << duration << std::endl;
+            // std::cout << client_ctx->time_taken[i] << " microseconds" << std::endl;
+          }
+          std::cout << "Average = " << total_duration / client_ctx->total_requests << " ms" << std::endl;
+
+          file.close();
+
+          // delete[] client_ctx->time_taken;
+          delete[] client_ctx->start_times;
+          delete[] client_ctx->end_times;
+          delete client_ctx;
+          exit(0);
+        }
+      }
+
+      break;
+    }
   case picoquic_callback_stream_fin: // Fin received from peer on stream N; data is optional
     // std::cout << "Client callback: stream fin. length is " << length << std::endl;
     break;

@@ -8,6 +8,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <fstream>
+#include <autoqlog.h>
 
 typedef struct st_client_app_ctx_t
 {
@@ -48,6 +49,8 @@ int main(int argc, char *argv[])
   char *default_alpn = "my_custom_alpn";
   // char *default_alpn = "application layer protocol";
   uint64_t current_time = picoquic_current_time();
+  char* qlog_dir = "/home/william/qlog";
+  
 
   // Create a quic context
   quic = picoquic_create(1, NULL, NULL, NULL, default_alpn, NULL, NULL,
@@ -65,7 +68,7 @@ int main(int argc, char *argv[])
   picoquic_set_default_multipath_option(quic, 1);  // Enable multipath
   picoquic_enable_path_callbacks_default(quic, 1); // Enable path callbacks e.g path available, path suspended, etc.
   // // picoquic_set_key_log_file_from_env(quic);
-  // // picoquic_set_qlog(quic, qlog_dir);
+  // picoquic_set_qlog(quic, qlog_dir);
   // // picoquic_set_log_level(quic, 1);
 
   // Set the server address
@@ -154,12 +157,15 @@ int sample_client_callback(picoquic_cnx_t *cnx,
                            picoquic_call_back_event_t fin_or_event, void *callback_ctx, void *v_stream_ctx)
 {
   client_app_ctx_t *client_ctx = (client_app_ctx_t *)callback_ctx;
+  float now_ms = 0;
 
   switch (fin_or_event)
   {
   case picoquic_callback_stream_data: // Data received from peer on stream N
-    // std::cout << "Client callback: stream data. length is " << length << std::endl;
-    // std::cout << "Data: " << std::string((char *)bytes, length) << std::endl;
+  {
+    std::chrono::time_point<std::chrono::system_clock> time_now = std::chrono::high_resolution_clock::now();
+    now_ms = (time_now.time_since_epoch().count() - client_ctx->start_timestamp.time_since_epoch().count()) / 1e6;
+    //std::cout << "Relative time: " << now_ms << ", Get stream data length is " << length << std::endl;
 
     // Store the response and if it's the end, send another request
     if (client_ctx->current_request_bytes_received == 0)
@@ -185,11 +191,11 @@ int sample_client_callback(picoquic_cnx_t *cnx,
       float duration = (client_ctx->end_times[req_id] - client_ctx->start_times[req_id]) / 1e6;
       client_ctx->current_request_bytes_received = 0;
 
-      std::cout << "ID " << req_id << ", duration = " << duration << " ms" << std::endl;
+      printf("Stream ID=%d, Req ID=%d, duration=%.2f\n", stream_id, req_id, duration);
 
       if (client_ctx->requests_sent < client_ctx->total_requests)
       {
-        // std::cout << "Sending another request" << std::endl;
+        std::cout << "Sending another request" << std::endl;
         client_ctx->start_timestamp = std::chrono::high_resolution_clock::now();
         picoquic_add_to_stream(cnx, stream_id, (const uint8_t *)client_ctx->request_msg.c_str(), client_ctx->request_msg.length(), 0);
         client_ctx->requests_sent++;
@@ -209,10 +215,13 @@ int sample_client_callback(picoquic_cnx_t *cnx,
           file << "request_send_timestamp, response_receive_timestamp" << std::endl;
         }
         float total_duration = 0;
+        float duration = 0;
         for (int i = 0; i < client_ctx->total_requests; i++)
         {
-          file << client_ctx->start_times[i] << "," << client_ctx->end_times[i] << std::endl;
-          total_duration += (client_ctx->end_times[i] - client_ctx->start_times[i]) / 1e6;
+          duration = (client_ctx->end_times[i] - client_ctx->start_times[i]) / 1e6;
+          total_duration += duration;
+          file << duration << std::endl;
+          std::cout << duration << std::endl;
           // std::cout << client_ctx->time_taken[i] << " microseconds" << std::endl;
         }
         std::cout << "Average = " << total_duration / client_ctx->total_requests << " ms" << std::endl;
@@ -226,6 +235,8 @@ int sample_client_callback(picoquic_cnx_t *cnx,
           std::cout << "Path " << i << ": from: " << picoquic_addr_text((sockaddr *)&cnx->path[i]->local_addr, text1, sizeof(text1)) << " to: " << picoquic_addr_text((sockaddr *)&cnx->path[i]->peer_addr, text2, sizeof(text2)) << std::endl;
         }
 
+        picoquic_close_immediate(cnx);
+
         // delete[] client_ctx->time_taken;
         delete[] client_ctx->start_times;
         delete[] client_ctx->end_times;
@@ -233,10 +244,10 @@ int sample_client_callback(picoquic_cnx_t *cnx,
         exit(0);
       }
     }
-
     break;
+  }
   case picoquic_callback_stream_fin: // Fin received from peer on stream N; data is optional
-    // std::cout << "Client callback: stream fin. length is " << length << std::endl;
+    std::cout << "Client callback: stream fin. length is " << length << std::endl;
     break;
   case picoquic_callback_ready:
   {
