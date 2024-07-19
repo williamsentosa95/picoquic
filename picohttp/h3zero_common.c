@@ -941,7 +941,7 @@ int h3zero_process_request_frame(
 		if (h3zero_server_parse_path(stream_ctx->ps.stream_state.header.path, stream_ctx->ps.stream_state.header.path_length,
 			&stream_ctx->echo_length, &stream_ctx->file_path, app_ctx->web_folder, &file_error) != 0) {
 			char log_text[256];
-			printf("Process GET 2 request!!!\n");
+			// printf("Process GET 2 request!!!\n");
 			picoquic_log_app_message(cnx, "Cannot find file for path: <%s> in folder <%s>, error: 0x%x",
 				picoquic_uint8_to_str(log_text, 256, stream_ctx->ps.stream_state.header.path, stream_ctx->ps.stream_state.header.path_length),
 				(app_ctx->web_folder == NULL) ? "NULL" : app_ctx->web_folder, file_error);
@@ -952,11 +952,22 @@ int h3zero_process_request_frame(
 		else {
 			response_length = (stream_ctx->echo_length == 0) ?
 				strlen(h3zero_server_default_page) : stream_ctx->echo_length;
-			printf("Process GET request!!!\n");
+			char log_text[256];
+			char* get_filename = picoquic_uint8_to_str(log_text, 256, stream_ctx->ps.stream_state.header.path, stream_ctx->ps.stream_state.header.path_length);
+			printf("Process GET %s, response length=%d bytes, file_path=%s\n", get_filename, response_length, stream_ctx->file_path);
 			o_bytes = h3zero_create_response_header_frame(o_bytes, o_bytes_max,
 				(stream_ctx->echo_length == 0) ? h3zero_content_type_text_html :
 				h3zero_content_type_text_plain);
 		}
+		// stream_ctx->echo_length = 100000;
+		// response_length = (stream_ctx->echo_length == 0) ?
+		// 		strlen(h3zero_server_default_page) : stream_ctx->echo_length;
+		// char log_text[256];
+		// char* get_filename = picoquic_uint8_to_str(log_text, 256, stream_ctx->ps.stream_state.header.path, stream_ctx->ps.stream_state.header.path_length);
+		// printf("Process GET %s, response length=%d bytes\n", get_filename, response_length);
+		// o_bytes = h3zero_create_response_header_frame(o_bytes, o_bytes_max,
+		// 	(stream_ctx->echo_length == 0) ? h3zero_content_type_text_html :
+		// 	h3zero_content_type_text_plain);
 	}
 	else if (stream_ctx->ps.stream_state.header.method == h3zero_method_post) {
 		/* Manage Post. */
@@ -1056,6 +1067,7 @@ int h3zero_process_request_frame(
 				if (stream_ctx->echo_length == 0) {
 					if (response_length <= sizeof(post_response)) {
 						if (o_bytes + (size_t)response_length <= o_bytes_max) {
+
 							memcpy(o_bytes, (stream_ctx->ps.stream_state.header.method == h3zero_method_post) ? post_response : (uint8_t*)h3zero_server_default_page, (size_t)response_length);
 							o_bytes += (size_t)response_length;
 						}
@@ -1075,8 +1087,11 @@ int h3zero_process_request_frame(
 			if (is_fin_stream && stream_ctx->ps.stream_state.header.method == h3zero_method_connect) {
 				picoquic_log_app_message(cnx, "Setting FIN in connect response on stream: %"PRIu64, stream_ctx->stream_id);
 			}
+			printf("Total response length = %d\n", o_bytes - buffer);
 			ret = picoquic_add_to_stream_with_ctx(cnx, stream_ctx->stream_id,
 				buffer, o_bytes - buffer, is_fin_stream, stream_ctx);
+
+			printf("Finish putting data to buffer, stream_id=%d!\n", stream_ctx->stream_id);
 			if (ret != 0) {
 				o_bytes = NULL;
 			}

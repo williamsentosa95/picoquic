@@ -2672,7 +2672,6 @@ picoquic_remote_cnxid_t* picoquic_obtain_stashed_cnxid(picoquic_cnx_t* cnx, uint
 {
     picoquic_remote_cnxid_stash_t* stash = picoquic_find_or_create_remote_cnxid_stash(cnx, unique_path_id, 0);
     picoquic_remote_cnxid_t* stashed = picoquic_get_cnxid_from_stash(stash);
-    
     return stashed;
 }
 

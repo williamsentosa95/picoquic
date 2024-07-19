@@ -277,102 +277,10 @@ picohttp_server_path_item_t path_item_list[2] =
     }
 };
 
-int quic_server(const char* server_name, picoquic_quic_config_t * config, int just_once)
-{
-    /* Start: start the QUIC process with cert and key files */
-    int ret = 0;
-    picoquic_quic_t* qserver = NULL;
-    uint64_t current_time = 0;
-    picohttp_server_parameters_t picoquic_file_param;
-    server_loop_cb_t loop_cb_ctx;
-
-    memset(&picoquic_file_param, 0, sizeof(picohttp_server_parameters_t));
-    picoquic_file_param.web_folder = config->www_dir;
-    picoquic_file_param.path_table = path_item_list;
-    picoquic_file_param.path_table_nb = 2;
-
-    memset(&loop_cb_ctx, 0, sizeof(server_loop_cb_t));
-    loop_cb_ctx.just_once = just_once;
-
-    /* Setup the server context */
-    if (ret == 0) {
-        current_time = picoquic_current_time();
-        /* Create QUIC context */
-
-        if (config->ticket_file_name == NULL) {
-            ret = picoquic_config_set_option(config, picoquic_option_Ticket_File_Name, ticket_store_filename);
-        }
-        if (ret == 0 && config->token_file_name == NULL) {
-            ret = picoquic_config_set_option(config, picoquic_option_Token_File_Name, token_store_filename);
-        }
-        if (ret == 0) {
-            qserver = picoquic_create_and_configure(config, picoquic_demo_server_callback, &picoquic_file_param, current_time, NULL);
-            if (qserver == NULL) {
-                ret = -1;
-            }
-            else {
-                picoquic_set_key_log_file_from_env(qserver);
-
-                picoquic_set_alpn_select_fn(qserver, picoquic_demo_server_callback_select_alpn);
-
-                picoquic_use_unique_log_names(qserver, 1);
-
-                if (config->qlog_dir != NULL)
-                {
-                    picoquic_set_qlog(qserver, config->qlog_dir);
-                }
-                if (config->performance_log != NULL)
-                {
-                    ret = picoquic_perflog_setup(qserver, config->performance_log);
-                }
-                if (ret == 0 && config->cnx_id_cbdata != NULL) {
-                    picoquic_load_balancer_config_t lb_config;
-                    ret = picoquic_lb_compat_cid_config_parse(&lb_config, config->cnx_id_cbdata, strlen(config->cnx_id_cbdata));
-                    if (ret != 0) {
-                        fprintf(stdout, "Cannot parse the CNX_ID config policy: %s.\n", config->cnx_id_cbdata);
-                    }
-                    else {
-                        ret = picoquic_lb_compat_cid_config(qserver, &lb_config);
-                        if (ret != 0) {
-                            fprintf(stdout, "Cannot set the CNX_ID config policy: %s.\n", config->cnx_id_cbdata);
-                        }
-                    }
-                }
-                if (ret == 0) {
-                    fprintf(stdout, "Accept enable multipath: %d.\n", qserver->default_multipath_option);
-                }
-            }
-        }
-    }
-
-    if (ret == 0) {
-        /* Wait for packets */
-#if _WINDOWS_BUT_WE_ARE_UNIFYING
-        ret = picoquic_packet_loop_win(qserver, config->server_port, 0, config->dest_if, 
-            config->socket_buffer_size, server_loop_cb, &loop_cb_ctx);
-#else
-        ret = picoquic_packet_loop(qserver, config->server_port, 0, config->dest_if,
-            config->socket_buffer_size, config->do_not_use_gso, server_loop_cb, &loop_cb_ctx);
-#endif
-    }
-
-    /* And exit */
-    printf("Server exit, ret = 0x%x\n", ret);
-
-    /* Clean up */
-    if (config->cnx_id_cbdata != NULL) {
-        picoquic_lb_compat_cid_config_free(qserver);
-    }
-    if (qserver != NULL) {
-        picoquic_free(qserver);
-    }
-
-    return ret;
-}
-
 // static const char * test_scenario_default = "0:index.html;4:test.html;8:/1234567;12:main.jpg;16:war-and-peace.txt;20:en/latest/;24:/file-123K";
 // static const char * test_scenario_default = "0:index.html";
-static const char * test_scenario_default = "0:index.html";
+static const char * test_scenario_default = "0:/150000;4:/10000";
+static const char * test_scenario_default2 = "0:/150000;4:/10000";
 
 /* Client loop call back management.
  * This is pretty complex, because the demo client is used to test a variety of interop
@@ -389,7 +297,9 @@ static const char * test_scenario_default = "0:index.html";
 
 typedef struct st_client_loop_cb_t {
     picoquic_cnx_t* cnx_client;
+    picoquic_cnx_t* cnx_client2;
     picoquic_demo_callback_ctx_t* demo_callback_ctx;
+    picoquic_demo_callback_ctx_t* demo_callback_ctx2;
     siduck_ctx_t* siduck_ctx;
     int notified_ready;
     int established;
@@ -447,7 +357,7 @@ int picoquic_parse_client_multipath_config(char *mp_config, int *src_if, struct 
     int ret = 0;
     int valid_ip, valid_index = 0;
     char *token, *token2, *ptr, *str;
-    str = malloc(sizeof(char) * (strlen(mp_config) + 1));
+    str = (char*) malloc(sizeof(char) * (strlen(mp_config) + 1));
     if (str == NULL) {
         ret = -1;
     }
@@ -460,7 +370,6 @@ int picoquic_parse_client_multipath_config(char *mp_config, int *src_if, struct 
 
         while ((token2 = picoquic_strsep(&token, "/"))) {
             if (picoquic_store_text_addr(&ip, token2, 0) == 0) {
-                printf("Token 2 = %s\n", token2);
                 memcpy(alt_ip+(*nb_alt_paths), &ip, sizeof(struct sockaddr_storage));
                 valid_ip = 1;
             }
@@ -494,7 +403,7 @@ static int simulate_migration(client_loop_cb_t* cb_ctx)
     } else {
         ((struct sockaddr_in*)&addr_from)->sin_port = htons(cb_ctx->local_port);
     }
-    printf("Probe new path is called!!\n");
+
     ret = picoquic_probe_new_path(cb_ctx->cnx_client,
         (struct sockaddr*)&cb_ctx->server_address,
         (struct sockaddr*)&addr_from,
@@ -518,6 +427,8 @@ int client_loop_cb(picoquic_quic_t* quic, picoquic_packet_loop_cb_enum cb_mode,
             fprintf(stdout, "Waiting for packets.\n");
             break;
         case picoquic_packet_loop_after_receive:
+        {
+            // printf("Picoquic packet loop after receive is called, cnx state = %d\n", picoquic_get_cnx_state(cb_ctx->cnx_client));
             /* Post receive callback */
             if ((!cb_ctx->is_siduck && !cb_ctx->is_quicperf && cb_ctx->demo_callback_ctx->connection_closed) ||
                 cb_ctx->cnx_client->cnx_state == picoquic_state_disconnected) {
@@ -537,6 +448,7 @@ int client_loop_cb(picoquic_quic_t* quic, picoquic_packet_loop_cb_enum cb_mode,
                     fprintf(stdout, "Client port (AF=%d): %d.\n", cb_ctx->client_address.ss_family, updated_port);
                 }
             }
+
             if (picoquic_get_cnx_state(cb_ctx->cnx_client) == picoquic_state_client_almost_ready && cb_ctx->notified_ready == 0) {
                 /* if almost ready, display results of negotiation */
                 if (picoquic_tls_is_psk_handshake(cb_ctx->cnx_client)) {
@@ -573,10 +485,10 @@ int client_loop_cb(picoquic_quic_t* quic, picoquic_packet_loop_cb_enum cb_mode,
                      * picoquic_probe_new_path request for the corresponding address.
                      */
                     int remote_cid_ready = (picoquic_obtain_stashed_cnxid(cb_ctx->cnx_client, 1) != NULL);
-                    // printf("Remote cid ready = %d\n", remote_cid_ready);
                     if (remote_cid_ready) {
                         struct sockaddr_in6 addr_zero = { 0 };
                         addr_zero.sin6_family = AF_INET6;
+
                         for (int i = 0; i < cb_ctx->nb_alt_paths; i++) {
                             if (picoquic_compare_addr((struct sockaddr*)&addr_zero, (struct sockaddr*)&cb_ctx->client_alt_address[i]) == 0) {
                                 simulate_multipath = 1;
@@ -590,7 +502,6 @@ int client_loop_cb(picoquic_quic_t* quic, picoquic_packet_loop_cb_enum cb_mode,
                                 picoquic_log_app_message(cb_ctx->cnx_client, "New path added, total path available %d\n", cb_ctx->cnx_client->nb_paths);
                             }
                             cb_ctx->multipath_probe_done = 1;
-                            printf("Probe done\n");
                         }
 
                         if (simulate_multipath) {
@@ -698,30 +609,59 @@ int client_loop_cb(picoquic_quic_t* quic, picoquic_packet_loop_cb_enum cb_mode,
                 }
             }
             break;
+        }
         case picoquic_packet_loop_after_send:
+        {
+            //printf("Picoquic packet loop after send is called, cnx state = %d\n", picoquic_get_cnx_state(cb_ctx->cnx_client));
             if (picoquic_get_cnx_state(cb_ctx->cnx_client) == picoquic_state_disconnected) {
                 ret = PICOQUIC_NO_ERROR_TERMINATE_PACKET_LOOP;
             }
-            else if (ret == 0 && cb_ctx->established == 0 && (picoquic_get_cnx_state(cb_ctx->cnx_client) == picoquic_state_ready ||
-                picoquic_get_cnx_state(cb_ctx->cnx_client) == picoquic_state_client_ready_start)) {
-                printf("Connection established. Version = %x, I-CID: %llx, verified: %d\n",
-                    picoquic_supported_versions[cb_ctx->cnx_client->version_index].version,
-                    (unsigned long long)picoquic_val64_connection_id(picoquic_get_logging_cnxid(cb_ctx->cnx_client)),
-                    cb_ctx->cnx_client->is_hcid_verified);
+            else if (ret == 0 && cb_ctx->established == 0) {
+                printf("cnx state = %d\n", picoquic_get_cnx_state(cb_ctx->cnx_client));
+                if (picoquic_get_cnx_state(cb_ctx->cnx_client) == picoquic_state_ready ||
+                    picoquic_get_cnx_state(cb_ctx->cnx_client) == picoquic_state_client_ready_start) {
+                    printf("Connection established. Version = %x, I-CID: %llx, verified: %d\n",
+                        picoquic_supported_versions[cb_ctx->cnx_client->version_index].version,
+                        (unsigned long long)picoquic_val64_connection_id(picoquic_get_logging_cnxid(cb_ctx->cnx_client)),
+                        cb_ctx->cnx_client->is_hcid_verified);
 
-                picoquic_log_app_message(cb_ctx->cnx_client,
-                    "Connection established. Version = %x, I-CID: %llx, verified: %d",
-                    picoquic_supported_versions[cb_ctx->cnx_client->version_index].version,
-                    (unsigned long long)picoquic_val64_connection_id(picoquic_get_logging_cnxid(cb_ctx->cnx_client)),
-                    cb_ctx->cnx_client->is_hcid_verified);
-                cb_ctx->established = 1;
+                    picoquic_log_app_message(cb_ctx->cnx_client,
+                        "Connection established. Version = %x, I-CID: %llx, verified: %d",
+                        picoquic_supported_versions[cb_ctx->cnx_client->version_index].version,
+                        (unsigned long long)picoquic_val64_connection_id(picoquic_get_logging_cnxid(cb_ctx->cnx_client)),
+                        cb_ctx->cnx_client->is_hcid_verified);
+                    cb_ctx->established = 1;
 
-                if (!cb_ctx->zero_rtt_available && !cb_ctx->is_siduck && !cb_ctx->is_quicperf) {
-                    /* Start the download scenario */
-                    ret = picoquic_demo_client_start_streams(cb_ctx->cnx_client, cb_ctx->demo_callback_ctx, PICOQUIC_DEMO_STREAM_ID_INITIAL);
+                    if (!cb_ctx->zero_rtt_available && !cb_ctx->is_siduck && !cb_ctx->is_quicperf) {
+                        /* Start the download scenario */
+                        printf("Start the download!!\n");
+                        ret = picoquic_demo_client_start_streams(cb_ctx->cnx_client, cb_ctx->demo_callback_ctx, PICOQUIC_DEMO_STREAM_ID_INITIAL);
+                    }
+                }
+                printf("cnx2 state = %d\n", picoquic_get_cnx_state(cb_ctx->cnx_client2));
+                if (picoquic_get_cnx_state(cb_ctx->cnx_client2) == picoquic_state_ready ||
+                    picoquic_get_cnx_state(cb_ctx->cnx_client2) == picoquic_state_client_ready_start) {
+                    printf("Connection 2 established. Version = %x, I-CID: %llx, verified: %d\n",
+                        picoquic_supported_versions[cb_ctx->cnx_client2->version_index].version,
+                        (unsigned long long)picoquic_val64_connection_id(picoquic_get_logging_cnxid(cb_ctx->cnx_client2)),
+                        cb_ctx->cnx_client2->is_hcid_verified);
+
+                    picoquic_log_app_message(cb_ctx->cnx_client2,
+                        "Connection 2 established. Version = %x, I-CID: %llx, verified: %d",
+                        picoquic_supported_versions[cb_ctx->cnx_client2->version_index].version,
+                        (unsigned long long)picoquic_val64_connection_id(picoquic_get_logging_cnxid(cb_ctx->cnx_client2)),
+                        cb_ctx->cnx_client2->is_hcid_verified);
+                    cb_ctx->established = 1;
+
+                    if (!cb_ctx->zero_rtt_available && !cb_ctx->is_siduck && !cb_ctx->is_quicperf) {
+                        /* Start the download scenario */
+                        printf("Start the download 2!!\n");
+                        ret = picoquic_demo_client_start_streams(cb_ctx->cnx_client2, cb_ctx->demo_callback_ctx2, PICOQUIC_DEMO_STREAM_ID_INITIAL);
+                    }
                 }
             }
             break;
+        }    
         case picoquic_packet_loop_port_update:
             break;
         default:
@@ -732,6 +672,22 @@ int client_loop_cb(picoquic_quic_t* quic, picoquic_packet_loop_cb_enum cb_mode,
     return ret;
 }
 
+// int client_loop_cb2(picoquic_cnx_t *cnx,
+//                            uint64_t stream_id, uint8_t *bytes, size_t length,
+//                            picoquic_call_back_event_t fin_or_event, void *callback_ctx, void *v_stream_ctx) 
+// {
+//     int ret = 0;
+//     client_loop_cb_t* cb_ctx = (client_loop_cb_t*)callback_ctx;
+
+//     switch (fin_or_event)
+//     {
+//         case picoquic_callback_stream_data:
+//         {
+
+//         }
+//     }
+// }
+
 /* Quic Client */
 int quic_client(const char* ip_address_text, int server_port, 
     picoquic_quic_config_t * config, int force_migration,
@@ -740,12 +696,19 @@ int quic_client(const char* ip_address_text, int server_port,
     /* Start: start the QUIC process with cert and key files */
     int ret = 0;
     picoquic_quic_t* qclient = NULL;
+    picoquic_quic_t* qclient2 = NULL;
     picoquic_cnx_t* cnx_client = NULL;
+    picoquic_cnx_t* cnx_client2 = NULL;
     picoquic_demo_callback_ctx_t callback_ctx = { 0 };
+    picoquic_demo_callback_ctx_t callback_ctx2 = { 0 };
     uint64_t current_time = 0;
     int is_name = 0;
     size_t client_sc_nb = 0;
     picoquic_demo_stream_desc_t * client_sc = NULL;
+
+    size_t client_sc_nb2 = 0;
+    picoquic_demo_stream_desc_t * client_sc2 = NULL;
+
     int is_siduck = 0;
     siduck_ctx_t* siduck_ctx = NULL;
     int is_quicperf = 0;
@@ -769,17 +732,19 @@ int quic_client(const char* ip_address_text, int server_port,
 
     if (ret == 0) {
         if (config->ticket_file_name == NULL) {
+            printf("Ticket file name\n");
             ret = picoquic_config_set_option(config, picoquic_option_Ticket_File_Name, ticket_store_filename);
         }
         if (ret == 0 && config->token_file_name == NULL) {
+            printf("Token file name\n");
             ret = picoquic_config_set_option(config, picoquic_option_Token_File_Name, token_store_filename);
         }
         if (ret == 0) {
             qclient = picoquic_create_and_configure(config, NULL, NULL, current_time, NULL);
+            qclient2 = picoquic_create_and_configure(config, NULL, NULL, current_time, NULL);
             if (qclient == NULL) {
                 ret = -1;
-            }
-            else {
+            } else {
                 picoquic_set_key_log_file_from_env(qclient);
 
                 if (config->qlog_dir != NULL)
@@ -792,148 +757,109 @@ int quic_client(const char* ip_address_text, int server_port,
                     ret = picoquic_perflog_setup(qclient, config->performance_log);
                 }
             }
-        }
-    }
-
-    /* If needed, set ALPN and proposed version from tickets */
-    if (ret == 0) {
-        if (config->alpn == NULL || config->proposed_version == 0) {
-            char const* ticket_alpn;
-            uint32_t ticket_version;
-            if (picoquic_demo_client_get_alpn_and_version_from_tickets(qclient, sni, config->alpn,
-                config->proposed_version, &ticket_alpn, &ticket_version) == 0) {
-                if (ticket_alpn != NULL) {
-                    fprintf(stdout, "Set ALPN to %s based on stored ticket\n", ticket_alpn);
-                    picoquic_config_set_option(config, picoquic_option_ALPN, ticket_alpn);
-                }
-
-                if (ticket_version != 0) {
-                    fprintf(stdout, "Set version to 0x%08x based on stored ticket\n", ticket_version);
-                    config->proposed_version = ticket_version;
-                }
+            if (qclient2 == NULL) {
+                ret = -1;
+                printf("Qclient2 failed!\n");
             }
         }
     }
 
-    if (ret == 0) {
-        if (config->alpn != NULL && (strcmp(config->alpn, "siduck") == 0 || strcmp(config->alpn, "siduck-00") == 0)) {
-            /* Set a siduck client */
-            is_siduck = 1;
-            siduck_ctx = siduck_create_ctx(stdout);
-            if (siduck_ctx == NULL) {
-                fprintf(stdout, "Could not get ready to quack\n");
-                return -1;
-            }
-            fprintf(stdout, "Getting ready to quack\n");
-        }
-        else if (config->alpn != NULL && strcmp(config->alpn, QUICPERF_ALPN) == 0) {
-            /* Set a QUICPERF client */
-            is_quicperf = 1;
-            quicperf_ctx = quicperf_create_ctx(client_scenario_text);
-            if (quicperf_ctx == NULL) {
-                fprintf(stdout, "Could not get ready to run QUICPERF\n");
-                return -1;
-            }
-            fprintf(stdout, "Getting ready to run QUICPERF\n");
-        }
-        else {
-            if (config->no_disk) {
-                fprintf(stdout, "Files not saved to disk (-D, no_disk)\n");
-            }
+    if (client_scenario_text == NULL) {
+        client_scenario_text = test_scenario_default;
+    }
 
-            if (client_scenario_text == NULL) {
-                client_scenario_text = test_scenario_default;
-            }
-
-            fprintf(stdout, "Testing scenario: <%s>\n", client_scenario_text);
-            ret = demo_client_parse_scenario_desc(client_scenario_text, &client_sc_nb, &client_sc);
-            if (ret != 0) {
-                fprintf(stdout, "Cannot parse the specified scenario.\n");
-                return -1;
-            }
-            else {
-                ret = picoquic_demo_client_initialize_context(&callback_ctx, client_sc, client_sc_nb, config->alpn, config->no_disk, 0);
-                callback_ctx.out_dir = config->out_dir;
-            }
-        }
+    fprintf(stdout, "Testing scenario: <%s>\n", client_scenario_text);
+    
+    ret = demo_client_parse_scenario_desc(client_scenario_text, &client_sc_nb, &client_sc);
+    ret = demo_client_parse_scenario_desc(test_scenario_default2, &client_sc_nb2, &client_sc2);
+    
+    if (ret != 0) {
+        fprintf(stdout, "Cannot parse the specified scenario.\n");
+        return -1;
+    }
+    else {
+        ret = picoquic_demo_client_initialize_context(&callback_ctx, client_sc, client_sc_nb, config->alpn, config->no_disk, 0);
+        ret = picoquic_demo_client_initialize_context(&callback_ctx2, client_sc2, client_sc_nb2, config->alpn, config->no_disk, 0);
+        callback_ctx.out_dir = config->out_dir;
     }
     /* Check that if we are using H3 the SNI is not NULL */
     if (ret == 0 && sni == NULL) {
         fprintf(stdout, "Careful: NULL SNI is incompatible with HTTP 3. Expect errors!\n");
     }
 
+
     /* Create the client connection */
     if (ret == 0) {
-        printf("Config multipath option = %d\n", config->multipath_option);
         /* Create a client connection */
         cnx_client = picoquic_create_cnx(qclient, picoquic_null_connection_id, picoquic_null_connection_id,
             (struct sockaddr*)&loop_cb.server_address, current_time,
             config->proposed_version, sni, config->alpn, 1);
 
-        if (cnx_client == NULL) {
+        cnx_client2 = picoquic_create_cnx(qclient, picoquic_null_connection_id, picoquic_null_connection_id,
+            (struct sockaddr*)&loop_cb.server_address, current_time,
+            config->proposed_version, sni, config->alpn, 1);
+
+        if (cnx_client == NULL || cnx_client2 == NULL) {
+            printf("Failed to create connection!!\n");
             ret = -1;
         }
         else {
             /* Set PMTUD policy to delayed on the client, leave to default=basic on server */
             picoquic_cnx_set_pmtud_policy(cnx_client, picoquic_pmtud_delayed);
+            picoquic_cnx_set_pmtud_policy(cnx_client2, picoquic_pmtud_delayed);
             picoquic_set_default_pmtud_policy(qclient, picoquic_pmtud_delayed);
+            
+            picoquic_set_callback(cnx_client, picoquic_demo_client_callback, &callback_ctx);
+            picoquic_set_callback(cnx_client2, picoquic_demo_client_callback, &callback_ctx2);
 
-            if (is_siduck) {
-                picoquic_set_callback(cnx_client, siduck_callback, siduck_ctx);
-                cnx_client->local_parameters.max_datagram_frame_size = 128;
-            }
-            else if (is_quicperf) {
-                picoquic_set_callback(cnx_client, quicperf_callback, quicperf_ctx);
-            }
-            else {
-                picoquic_set_callback(cnx_client, picoquic_demo_client_callback, &callback_ctx);
+            /* Requires TP grease, for interop tests */
+            cnx_client->grease_transport_parameters = 1;
+            cnx_client->local_parameters.enable_time_stamp = 3;
+            cnx_client->local_parameters.do_grease_quic_bit = 1;
 
-                /* Requires TP grease, for interop tests */
-                cnx_client->grease_transport_parameters = 1;
-                cnx_client->local_parameters.enable_time_stamp = 3;
-                cnx_client->local_parameters.do_grease_quic_bit = 1;
+            cnx_client2->grease_transport_parameters = 1;
+            cnx_client2->local_parameters.enable_time_stamp = 3;
+            cnx_client2->local_parameters.do_grease_quic_bit = 1;
 
-                if (callback_ctx.tp != NULL) {
-                    picoquic_set_transport_parameters(cnx_client, callback_ctx.tp);
-                }
+            if (callback_ctx.tp != NULL) {
+                printf("SET TP\n");
+                picoquic_set_transport_parameters(cnx_client, callback_ctx.tp);
             }
 
-            if (config->large_client_hello) {
-                cnx_client->test_large_chello = 1;
+            if (callback_ctx2.tp != NULL) {
+                picoquic_set_transport_parameters(cnx_client2, callback_ctx2.tp);
             }
 
-            if (config->desired_version != 0) {
-                picoquic_set_desired_version(cnx_client, config->desired_version);
-            }
+            printf("Starting client cnxs!\n");
+            
+            ret = picoquic_start_client_cnx(cnx_client);
+            ret = picoquic_start_client_cnx(cnx_client2);
 
-            fprintf(stdout, "Max stream id bidir remote before start = %d (%d)\n",
-                (int)cnx_client->max_stream_id_bidir_remote,
-                (int)cnx_client->remote_parameters.initial_max_stream_id_bidir);
-
-            if (ret == 0) {
-                ret = picoquic_start_client_cnx(cnx_client);
-
-                printf("Starting client connection. Version = %x, I-CID: %llx\n",
-                    picoquic_supported_versions[cnx_client->version_index].version,
-                    (unsigned long long)picoquic_val64_connection_id(picoquic_get_logging_cnxid(cnx_client)));
-
-                fprintf(stdout, "Max stream id bidir remote after start = %d (%d)\n",
-                    (int)cnx_client->max_stream_id_bidir_remote,
-                    (int)cnx_client->remote_parameters.initial_max_stream_id_bidir);
-            }
+            printf("CNX alpn = %s\n", cnx_client->alpn);
 
             if (ret == 0 && !is_siduck && !is_quicperf) {
+                printf("Finish conn!!\n");
                 if (picoquic_is_0rtt_available(cnx_client) && (config->proposed_version & 0x0a0a0a0a) != 0x0a0a0a0a) {
                     loop_cb.zero_rtt_available = 1;
 
-                    fprintf(stdout, "Max stream id bidir remote after 0rtt = %d (%d)\n",
-                        (int)cnx_client->max_stream_id_bidir_remote,
-                        (int)cnx_client->remote_parameters.initial_max_stream_id_bidir);
+                    // fprintf(stdout, "Max stream id bidir remote after 0rtt = %d (%d)\n",
+                    //     (int)cnx_client->max_stream_id_bidir_remote,
+                    //     (int)cnx_client->remote_parameters.initial_max_stream_id_bidir);
 
                     /* Queue a simple frame to perform 0-RTT test */
                     /* Start the download scenario */
-
                     ret = picoquic_demo_client_start_streams(cnx_client, &callback_ctx, PICOQUIC_DEMO_STREAM_ID_INITIAL);
+                }
+                if (picoquic_is_0rtt_available(cnx_client2) && (config->proposed_version & 0x0a0a0a0a) != 0x0a0a0a0a) {
+                    loop_cb.zero_rtt_available = 1;
+
+                    // fprintf(stdout, "Max stream id bidir remote after 0rtt = %d (%d)\n",
+                    //     (int)cnx_client->max_stream_id_bidir_remote,
+                    //     (int)cnx_client->remote_parameters.initial_max_stream_id_bidir);
+
+                    /* Queue a simple frame to perform 0-RTT test */
+                    /* Start the download scenario */
+                    ret = picoquic_demo_client_start_streams(cnx_client2, &callback_ctx2, PICOQUIC_DEMO_STREAM_ID_INITIAL);
                 }
             }
         }
@@ -942,10 +868,10 @@ int quic_client(const char* ip_address_text, int server_port,
     if (ret == 0) {
         if (config->multipath_alt_config != NULL) {
             picoquic_parse_client_multipath_config(config->multipath_alt_config, loop_cb.client_alt_if, loop_cb.client_alt_address, &loop_cb.nb_alt_paths);
-            printf("Num paths = %d\n", loop_cb.nb_alt_paths);
         }
 
         loop_cb.cnx_client = cnx_client;
+        loop_cb.cnx_client2 = cnx_client2;
         loop_cb.force_migration = force_migration;
         loop_cb.nb_packets_before_key_update = nb_packets_before_key_update;
         loop_cb.is_siduck = is_siduck;
@@ -956,6 +882,7 @@ int quic_client(const char* ip_address_text, int server_port,
         }
         else if (!is_quicperf) {
             loop_cb.demo_callback_ctx = &callback_ctx;
+            loop_cb.demo_callback_ctx2 = &callback_ctx2;
         }
 
         /* In case needed, program an extra path, so we can simulate multipath or migration */
@@ -969,6 +896,7 @@ int quic_client(const char* ip_address_text, int server_port,
         }
         loop_cb.local_port = param.local_port;
 
+        printf("Stat: cnx1=%d, cnx2=%d\n", picoquic_get_cnx_state(cnx_client), picoquic_get_cnx_state(cnx_client2));
         ret = picoquic_packet_loop_v2(qclient, &param, client_loop_cb, &loop_cb);
     }
 
@@ -1139,7 +1067,6 @@ int quic_client(const char* ip_address_text, int server_port,
                 printf("max_mtu_received: %zu\n", cnx_client->max_mtu_received);
 
                 if (config->multipath_option != 0) {
-                    printf("Nb paths = %d\n", cnx_client->nb_paths);
                     for (int i = 0; i < cnx_client->nb_paths; i++) {
                         printf("Path[%d], packets sent: %" PRIu64 "\n", i,
                             cnx_client->path[i]->path_packet_number);
@@ -1255,13 +1182,25 @@ int main(int argc, char** argv)
     memcpy(option_string, "A:u:f:1", 7);
     ret = picoquic_config_option_letters(option_string + 7, sizeof(option_string) - 7, NULL);
 
+    // populate argc and argv
+    int temp_argc = 6;
+    char *temp_argv[] = {
+        "./program_name",
+        "-n",
+        "test",
+        "-D",
+        "100.64.0.1",
+        "9000"
+    };
+
     if (ret == 0) {
         /* Get the parameters */
-        while ((opt = getopt(argc, argv, option_string)) != -1) {
+        while ((opt = getopt(temp_argc, temp_argv, option_string)) != -1) {
             switch (opt) {
             case 'u':
                 if ((nb_packets_before_update = atoi(optarg)) <= 0) {
                     fprintf(stderr, "Invalid number of packets: %s\n", optarg);
+                    printf("NO1\n");
                     usage();
                 }
                 break;
@@ -1269,6 +1208,7 @@ int main(int argc, char** argv)
                 force_migration = atoi(optarg);
                 if (force_migration <= 0 || force_migration > 3) {
                     fprintf(stderr, "Invalid migration mode: %s\n", optarg);
+                    printf("NO2\n");
                     usage();
                 }
                 break;
@@ -1281,7 +1221,8 @@ int main(int argc, char** argv)
                 printf("config.multipath_alt_config: %s\n", config.multipath_alt_config);
                 break;
             default:
-                if (picoquic_config_command_line(opt, &optind, argc, (char const **)argv, optarg, &config) != 0) {
+                if (picoquic_config_command_line(opt, &optind, temp_argc, (char const **)temp_argv, optarg, &config) != 0) {
+                    printf("NO3\n");
                     usage();
                 }
                 break;
@@ -1291,56 +1232,31 @@ int main(int argc, char** argv)
 
     /* Simplified style params */
     if (optind < argc) {
-        server_name = argv[optind++];
+        server_name = temp_argv[optind++];
         is_client = 1;
     }
 
     if (optind < argc) {
-        if ((server_port = atoi(argv[optind++])) <= 0) {
+        if ((server_port = atoi(temp_argv[optind++])) <= 0) {
             fprintf(stderr, "Invalid port: %s\n", optarg);
             usage();
         }
     }
 
-    if (optind < argc) {
-        client_scenario = argv[optind++];
+    if (optind < temp_argc) {
+        client_scenario = temp_argv[optind++];
     }
 
-    if (optind < argc) {
+    if (optind < temp_argc) {
         usage();
     }
+    
+    /* Run as client */
+    printf("Starting Picoquic (v%s) connection to server = %s, port = %d\n", PICOQUIC_VERSION, server_name, server_port);
+    ret = quic_client(server_name, server_port, &config,
+        force_migration, nb_packets_before_update, client_scenario);
 
-    if (is_client == 0) {
-        if (config.server_port == 0) {
-            config.server_port = server_port;
-        }
-
-        if (config.server_cert_file == NULL &&
-            picoquic_get_input_path(default_server_cert_file, sizeof(default_server_cert_file), config.solution_dir, SERVER_CERT_FILE) == 0) {
-            /* Using set option call to ensure proper memory management*/
-            picoquic_config_set_option(&config, picoquic_option_CERT, default_server_cert_file);
-        }
-
-        if (config.server_key_file == NULL &&
-            picoquic_get_input_path(default_server_key_file, sizeof(default_server_key_file), config.solution_dir, SERVER_KEY_FILE) == 0) {
-            /* Using set option call to ensure proper memory management*/
-            picoquic_config_set_option(&config, picoquic_option_KEY, default_server_key_file);
-        }
-
-        /* Run as server */
-        printf("Starting Picoquic server (v%s) on port %d, server name = %s, just_once = %d, do_retry = %d\n",
-            PICOQUIC_VERSION, config.server_port, server_name, just_once, config.do_retry);
-        ret = quic_server(server_name, &config, just_once);
-        printf("Server exit with code = %d\n", ret);
-    }
-    else {
-        /* Run as client */
-        printf("Starting Picoquic (v%s) connection to server = %s, port = %d\n", PICOQUIC_VERSION, server_name, server_port);
-        ret = quic_client(server_name, server_port, &config,
-            force_migration, nb_packets_before_update, client_scenario);
-
-        printf("Client exit with code = %d\n", ret);
-    }
+    printf("Client exit with code = %d\n", ret);
 
     picoquic_config_clear(&config);
 }

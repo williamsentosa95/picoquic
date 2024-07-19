@@ -380,6 +380,7 @@ static int config_set_option(option_table_line_t* option_desc, option_param_t* p
             ret = (ret == 0) ? -1 : ret;
         }
         else {
+            printf("multipath option = %d\n", v);
             config->multipath_option = v;
         }
         break;

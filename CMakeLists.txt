@@ -440,6 +440,115 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
     target_include_directories(client_toy_mp PRIVATE loglib picoquic)
     set_picoquic_compile_settings(client_toy_mp)
 
+    add_executable(client_toy_mp_trace
+    toy_app/client_mp_trace.cpp)
+    target_link_libraries(client_toy_mp_trace PRIVATE picoquic-log picoquic-core)
+    target_include_directories(client_toy_mp_trace PRIVATE loglib picoquic)
+    set_picoquic_compile_settings(client_toy_mp_trace)
+
+    # web browsing
+    add_executable(server_browsing
+    web_browsing/server.cpp)
+    target_link_libraries(server_browsing PRIVATE picoquic-log picoquic-core)
+    target_include_directories(server_browsing PRIVATE loglib picoquic)
+    set_picoquic_compile_settings(server_browsing)
+
+    add_executable(client_browsing
+    web_browsing/client.cpp)
+    target_link_libraries(client_browsing PRIVATE picoquic-log picoquic-core picohttp-core ${PTLS_LIBRARIES} ${OPENSSL_LIBRARIES} ${MBEDTLS_LIBRARIES})
+    target_include_directories(client_browsing PRIVATE loglib picoquic picohttp)
+    set_picoquic_compile_settings(client_browsing)
+
+    add_executable(emulated_browser
+    web_browsing/emulated-browser.cpp)
+    target_link_libraries(emulated_browser PRIVATE picoquic-log picoquic-core)
+    target_include_directories(emulated_browser PRIVATE loglib picoquic)
+    set_picoquic_compile_settings(emulated_browser)
+
+    add_executable(picoquic_client
+    picoquicfirst/picoquic_client.c
+    picoquicfirst/getopt.c)
+    target_link_libraries(picoquic_client
+        PRIVATE
+            ${PTLS_LIBRARIES}
+            ${OPENSSL_LIBRARIES}
+            ${MBEDTLS_LIBRARIES}
+            picoquic-log
+            picoquic-core
+            picohttp-core)
+    target_include_directories(picoquic_client PRIVATE picohttp)
+    set_picoquic_compile_settings(picoquic_client)
+
+    add_executable(picoquic_server
+    picoquicfirst/picoquic_server.c
+    picoquicfirst/getopt.c)
+    target_link_libraries(picoquic_server
+        PRIVATE
+            ${PTLS_LIBRARIES}
+            ${OPENSSL_LIBRARIES}
+            ${MBEDTLS_LIBRARIES}
+            picoquic-log
+            picoquic-core
+            picohttp-core)
+    target_include_directories(picoquic_server PRIVATE picohttp)
+    set_picoquic_compile_settings(picoquic_server)
+
+    add_executable(http_client_toy
+    picoquicfirst/http_client_toy.cpp
+    picoquicfirst/getopt.c)
+    target_link_libraries(http_client_toy
+        PRIVATE
+            ${PTLS_LIBRARIES}
+            ${OPENSSL_LIBRARIES}
+            ${MBEDTLS_LIBRARIES}
+            picoquic-log
+            picoquic-core
+            picohttp-core)
+    target_include_directories(http_client_toy PRIVATE picohttp)
+    set_picoquic_compile_settings(http_client_toy)
+
+    add_executable(http3_client
+    web_browsing/http3_client.cpp
+    picoquicfirst/getopt.c)
+    target_link_libraries(http3_client
+        PRIVATE
+            ${PTLS_LIBRARIES}
+            ${OPENSSL_LIBRARIES}
+            ${MBEDTLS_LIBRARIES}
+            picoquic-log
+            picoquic-core
+            picohttp-core)
+    target_include_directories(http3_client PRIVATE picohttp)
+    set_picoquic_compile_settings(http3_client)
+
+    add_executable(emulated_http3_browser
+    web_browsing/emulated_http3_browser.cpp
+    picoquicfirst/getopt.c)
+    target_link_libraries(emulated_http3_browser
+        PRIVATE
+            ${PTLS_LIBRARIES}
+            ${OPENSSL_LIBRARIES}
+            ${MBEDTLS_LIBRARIES}
+            picoquic-log
+            picoquic-core
+            picohttp-core)
+    target_include_directories(emulated_http3_browser PRIVATE picohttp)
+    set_picoquic_compile_settings(emulated_http3_browser)
+
+    add_executable(emulated_http3_browser_mp
+    web_browsing/emulated_http3_browser_mp.cpp
+    picoquicfirst/getopt.c)
+    target_link_libraries(emulated_http3_browser_mp
+        PRIVATE
+            ${PTLS_LIBRARIES}
+            ${OPENSSL_LIBRARIES}
+            ${MBEDTLS_LIBRARIES}
+            picoquic-log
+            picoquic-core
+            picohttp-core)
+    target_include_directories(emulated_http3_browser_mp PRIVATE picohttp)
+    set_picoquic_compile_settings(emulated_http3_browser_mp)
+
 endif()
 
 # get all project files for formatting

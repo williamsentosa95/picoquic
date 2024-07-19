@@ -57,7 +57,7 @@ static picoquic_alpn_list_t alpn_list[] = {
 
 static size_t nb_alpn_list = sizeof(alpn_list) / sizeof(picoquic_alpn_list_t);
 
-void picoquic_demo_client_set_alpn_list(void* tls_context)
+void picoquic_client_set_alpn_list(void* tls_context)
 {
     int ret = 0;
 
@@ -382,6 +382,7 @@ int picoquic_demo_client_start_streams(picoquic_cnx_t* cnx,
         switch (ctx->alpn) {
         case picoquic_alpn_http_3:
             ret = h3zero_protocol_init(cnx);
+            printf("H3 protocol!\n");
             break;
         default:
             break;
@@ -391,26 +392,34 @@ int picoquic_demo_client_start_streams(picoquic_cnx_t* cnx,
 	/* Open all the streams scheduled after the stream that
 	 * just finished */
     for (size_t i = 0; ret == 0 && i < ctx->nb_demo_streams; i++) {
-        if (ctx->demo_stream[i].previous_stream_id == fin_stream_id) {
-            uint64_t repeat_nb = 0;
-            do {
-                ret = picoquic_demo_client_open_stream(cnx, ctx, ctx->demo_stream[i].stream_id,
+        // if (ctx->demo_stream[i].previous_stream_id == fin_stream_id) {
+        //     uint64_t repeat_nb = 0;
+        //     do {
+        //         printf("Sending doc_name=%s, f_name=%s\n", ctx->demo_stream[i].doc_name, ctx->demo_stream[i].f_name);
+        //         ret = picoquic_demo_client_open_stream(cnx, ctx, ctx->demo_stream[i].stream_id,
+        //             ctx->demo_stream[i].doc_name,
+        //             ctx->demo_stream[i].f_name,
+        //             (size_t)ctx->demo_stream[i].post_size,
+        //             repeat_nb);
+        //         repeat_nb++;
+        //     } while (ret == 0 && repeat_nb < ctx->demo_stream[i].repeat_count);
+
+        //     if (ret == 0 && repeat_nb > 1 && !ctx->no_print) {
+        //         fprintf(stdout, "Repeated stream opening %d times.\n", (int)repeat_nb);
+        //     }
+            
+        //     if (repeat_nb < ctx->demo_stream[i].repeat_count) {
+        //         fprintf(stdout, "Could only open %d streams out of %d, ret = %d.\n", (int)repeat_nb, (int)ctx->demo_stream[i].repeat_count, ret);
+        //     }
+        // }
+        printf("Sending stream_id=%d, doc_name=%s, f_name=%s\n", ctx->demo_stream[i].stream_id, ctx->demo_stream[i].doc_name, ctx->demo_stream[i].f_name);
+        ret = picoquic_demo_client_open_stream(cnx, ctx, ctx->demo_stream[i].stream_id,
                     ctx->demo_stream[i].doc_name,
                     ctx->demo_stream[i].f_name,
                     (size_t)ctx->demo_stream[i].post_size,
-                    repeat_nb);
-                repeat_nb++;
-            } while (ret == 0 && repeat_nb < ctx->demo_stream[i].repeat_count);
-
-            if (ret == 0 && repeat_nb > 1 && !ctx->no_print) {
-                fprintf(stdout, "Repeated stream opening %d times.\n", (int)repeat_nb);
-            }
-            
-            if (repeat_nb < ctx->demo_stream[i].repeat_count) {
-                fprintf(stdout, "Could only open %d streams out of %d, ret = %d.\n", (int)repeat_nb, (int)ctx->demo_stream[i].repeat_count, ret);
-            }
-        }
+                    0);
     }
+    printf("all files are sent!\n");
 
     return ret;
 }
@@ -454,7 +463,10 @@ int picoquic_demo_client_callback(picoquic_cnx_t* cnx,
     case picoquic_callback_stream_fin:
         /* Data arrival on stream #x, maybe with fin mark */
         if (stream_ctx == NULL) {
+            printf("Find stream\n");
             stream_ctx = picoquic_demo_client_find_stream(ctx, stream_id);
+        } else {
+            printf("No need to search stream\n");
         }
         if (stream_ctx != NULL && stream_ctx->is_open) {
             if (!stream_ctx->is_file_open && ctx->no_disk == 0) {
@@ -466,6 +478,7 @@ int picoquic_demo_client_callback(picoquic_cnx_t* cnx,
                     uint64_t error_found = 0;
                     size_t available_data = 0;
                     uint8_t * bytes_max = bytes + length;
+                    printf("Response length = %d, fin_or_event=%d\n", length, fin_or_event);
                     while (bytes < bytes_max) {
                         bytes = h3zero_parse_data_stream(bytes, bytes_max, &stream_ctx->stream_state, &available_data, &error_found);
                         if (bytes == NULL) {
@@ -517,7 +530,9 @@ int picoquic_demo_client_callback(picoquic_cnx_t* cnx,
             }
 
             if (fin_or_event == picoquic_callback_stream_fin) {
+                printf("IN1\n");
                 if (picoquic_demo_client_close_stream(cnx, ctx, stream_ctx)) {
+                    printf("IN2\n");
                     fin_stream_id = stream_id;
                     if (stream_id <= 64 && !ctx->no_print) {
                         fprintf(stdout, "Stream %" PRIu64 " ended after %" PRIu64 " bytes\n",
@@ -601,12 +616,15 @@ int picoquic_demo_client_callback(picoquic_cnx_t* cnx,
         }
     case picoquic_callback_almost_ready:
     case picoquic_callback_ready:
+        printf("Connection ready\n");
         ctx->connection_ready = 1;
         break;
     case picoquic_callback_request_alpn_list:
-        picoquic_demo_client_set_alpn_list((void*)bytes);
+        printf("Set ALPN list\n");
+        picoquic_client_set_alpn_list((void*)bytes);
         break;
     case picoquic_callback_set_alpn:
+        printf("Set ALPN\n");
         ctx->alpn = picoquic_parse_alpn((const char*)bytes);
         break;
     default:
@@ -614,10 +632,10 @@ int picoquic_demo_client_callback(picoquic_cnx_t* cnx,
         break;
     }
 
-    if (ret == 0 && fin_stream_id != PICOQUIC_DEMO_STREAM_ID_INITIAL) {
-         /* start next batch of streams! */
-		 ret = picoquic_demo_client_start_streams(cnx, ctx, fin_stream_id);
-    }
+    // if (ret == 0 && fin_stream_id != PICOQUIC_DEMO_STREAM_ID_INITIAL) {
+    //      /* start next batch of streams! */
+	// 	 ret = picoquic_demo_client_start_streams(cnx, ctx, fin_stream_id);
+    // }
 
     /* that's it */
     return ret;

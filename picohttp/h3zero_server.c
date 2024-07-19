@@ -30,6 +30,8 @@
 #include "h3zero_common.h"
 #include "democlient.h"
 
+#define REQUEST_FILESIZE_DELIMITTER "fszb-"
+
 /*
  * Incoming data call back.
  * Create context if not yet present.
@@ -84,7 +86,7 @@ int demo_server_is_path_sane(const uint8_t* path, size_t path_length)
 }
 
 int demo_server_try_file_path(const uint8_t* path, size_t path_length, uint64_t* echo_size,
-    char** file_path, char const* web_folder, int * file_error)
+    char** file_path, char const* web_folder, int * file_error, char * temp_path)
 {
     int ret = -1;
     size_t len = strlen(web_folder);
@@ -93,6 +95,7 @@ int demo_server_try_file_path(const uint8_t* path, size_t path_length, uint64_t*
     FILE* F;
 
     if (file_name != NULL && demo_server_is_path_sane(path, path_length) == 0) {
+    // if (file_name != NULL && demo_server_is_path_sane(path, path_length) == 0) {
         memcpy(file_name, web_folder, len);
 #ifdef _WINDOWS
         if (len == 0 || file_name[len - 1] != '\\') {
@@ -108,6 +111,9 @@ int demo_server_try_file_path(const uint8_t* path, size_t path_length, uint64_t*
         memcpy(file_name + len, path+1, path_length-1);
         len += path_length - 1;
         file_name[len] = 0;
+
+        printf("File name = %s\n", file_name);
+        strcpy(temp_path, file_name);
 
         F = picoquic_file_open_ex(file_name, "rb", file_error);
 
@@ -133,10 +139,29 @@ int demo_server_try_file_path(const uint8_t* path, size_t path_length, uint64_t*
     return ret;
 }
 
+
+char* split(char*str, const char * delim) {
+    char *p = strstr(str, delim);
+
+    if (p == NULL) return NULL;     // delimiter not found
+
+    *p = '\0';                      // terminate string after head
+    return p + strlen(delim);       // return tail substring
+}
+
+int get_file_size(char* str, char* delim) {
+    char* tail = split(str, delim);
+    if (tail) {
+        return atoi(tail);
+    }
+    return 0;
+}
+
 int h3zero_server_parse_path(const uint8_t * path, size_t path_length, uint64_t * echo_size, 
     char ** file_path, char const * web_folder, int * file_error)
 {
     int ret = 0;
+    char temp_path[100000];
 
     *file_error = 0;
 
@@ -151,10 +176,17 @@ int h3zero_server_parse_path(const uint8_t * path, size_t path_length, uint64_t 
         ret = -1;
     }
     else if (web_folder != NULL && demo_server_try_file_path(path, path_length, echo_size,
-        file_path, web_folder, file_error) == 0) {
+        file_path, web_folder, file_error, temp_path) == 0) {
         ret = 0;
     }
-    else if (path_length > 1 && (path_length != 11 || memcmp(path, "/index.html", 11) != 0)) {
+
+    printf("temp_file_path = %s\n", temp_path);
+    char* delim = REQUEST_FILESIZE_DELIMITTER;
+    if (strstr(temp_path, delim)) {
+        int filesize = get_file_size(temp_path, delim);
+        printf("Extracted file size = %d\n", filesize);
+        *echo_size = filesize;
+    } else if (path_length > 1 && (path_length != 11 || memcmp(path, "/index.html", 11) != 0)) {
         uint64_t x = 0;
         for (size_t i = 1; i < path_length; i++) {
             if (path[i] < '0' || path[i] > '9') {
