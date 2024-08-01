@@ -521,6 +521,20 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
     target_include_directories(http3_client PRIVATE picohttp)
     set_picoquic_compile_settings(http3_client)
 
+    add_executable(http3_client_mp
+    web_browsing/http3_client_mp.cpp
+    picoquicfirst/getopt.c)
+    target_link_libraries(http3_client_mp
+        PRIVATE
+            ${PTLS_LIBRARIES}
+            ${OPENSSL_LIBRARIES}
+            ${MBEDTLS_LIBRARIES}
+            picoquic-log
+            picoquic-core
+            picohttp-core)
+    target_include_directories(http3_client_mp PRIVATE picohttp)
+    set_picoquic_compile_settings(http3_client_mp)
+
     add_executable(emulated_http3_browser
     web_browsing/emulated_http3_browser.cpp
     picoquicfirst/getopt.c)

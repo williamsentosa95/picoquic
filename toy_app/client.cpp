@@ -7,6 +7,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <fstream>
+#include <string>
 
 typedef struct st_client_app_ctx_t
 {
@@ -23,6 +24,7 @@ typedef struct st_client_app_ctx_t
   std::chrono::time_point<std::chrono::system_clock> start_timestamp;
   std::chrono::time_point<std::chrono::system_clock> end_timestamp;
   std::string output_file;
+  int cnx_id;
 } client_app_ctx_t;
 
 int sample_client_callback(picoquic_cnx_t *cnx,
@@ -75,9 +77,18 @@ int main(int argc, char *argv[])
   cnx = picoquic_create_cnx(quic, picoquic_null_connection_id, picoquic_null_connection_id,
                             (struct sockaddr *)&server_address, current_time, 0, NULL, default_alpn, 1);
 
+  // Create a connection
+  picoquic_cnx_t *cnx2 = picoquic_create_cnx(quic, picoquic_null_connection_id, picoquic_null_connection_id,
+                            (struct sockaddr *)&server_address, current_time, 0, NULL, default_alpn, 1);
+
   if (cnx == NULL)
   {
     fprintf(stderr, "Could not create connection context\n");
+  }
+
+  if (cnx2 == NULL)
+  {
+    fprintf(stderr, "Could not create connection context 2\n");
   }
 
   // Creating the client context
@@ -89,19 +100,39 @@ int main(int argc, char *argv[])
   // std::cout << "Total requests: " << client_ctx->total_requests << std::endl;
   client_ctx->requests_sent = 0;
   client_ctx->bytes_requested = strtol(argv[2], NULL, 10);
-  // std::cout << "Bytes requested: " << client_ctx->bytes_requested << std::endl;
-  client_ctx->request_msg = std::string(argv[2]);
+  std::cout << "Bytes requested: " << client_ctx->bytes_requested << std::endl;
+  client_ctx->request_msg = std::to_string(client_ctx->bytes_requested);
   client_ctx->total_bytes_received = 0;
   client_ctx->current_request_bytes_received = 0;
   // client_ctx->time_taken = new int[client_ctx->total_requests];
   client_ctx->start_times = new long[client_ctx->total_requests];
   client_ctx->end_times = new long[client_ctx->total_requests];
   client_ctx->output_file = std::string(argv[3]);
+  client_ctx->cnx_id = 1;
 
-  // printf("Starting connection to %s, port %d\n", server_name, server_port);
+  printf("Starting connection to %s, port %d\n", server_name, server_port);
 
   picoquic_set_callback(cnx, sample_client_callback, client_ctx);
+
+  // client_app_ctx_t *client_ctx2 = new client_app_ctx_t();
+  // client_ctx2->total_requests = atoi(argv[1]);
+  // // std::cout << "Total requests: " << client_ctx->total_requests << std::endl;
+  // client_ctx2->requests_sent = 0;
+  // client_ctx2->bytes_requested = strtol(argv[2], NULL, 10);
+  // // std::cout << "Bytes requested: " << client_ctx->bytes_requested << std::endl;
+  // client_ctx2->request_msg = std::to_string(client_ctx2->bytes_requested);
+  // client_ctx2->total_bytes_received = 0;
+  // client_ctx2->current_request_bytes_received = 0;
+  // // client_ctx->time_taken = new int[client_ctx->total_requests];
+  // client_ctx2->start_times = new long[client_ctx->total_requests];
+  // client_ctx2->end_times = new long[client_ctx->total_requests];
+  // client_ctx2->output_file = "/home/william/test2.txt";
+  // client_ctx2->cnx_id = 2;
+
+  // picoquic_set_callback(cnx2, sample_client_callback, client_ctx2);
+
   ret = picoquic_start_client_cnx(cnx);
+  // int ret2 = picoquic_start_client_cnx(cnx2);
 
   if (ret < 0)
   {
@@ -180,13 +211,14 @@ int sample_client_callback(picoquic_cnx_t *cnx,
         client_ctx->start_times[req_id] = client_ctx->start_timestamp.time_since_epoch().count();
         client_ctx->end_times[req_id] = client_ctx->end_timestamp.time_since_epoch().count();
         float duration = (client_ctx->end_times[req_id] - client_ctx->start_times[req_id]) / 1e6;
+        std::cout << client_ctx->cnx_id << " : ID " << req_id << "received = " << client_ctx->current_request_bytes_received << ", duration = " << duration << " ms" << std::endl;
         client_ctx->current_request_bytes_received = 0;
 
-        std::cout << "ID " << req_id << ", duration = " << duration << " ms" << std::endl;
+        
 
         if (client_ctx->requests_sent < client_ctx->total_requests)
         {
-          // std::cout << "Sending another request" << std::endl;
+          std::cout << client_ctx->cnx_id << " : Sending another request" << std::endl;
           client_ctx->start_timestamp = std::chrono::high_resolution_clock::now();
           picoquic_add_to_stream(cnx, stream_id, (const uint8_t *)client_ctx->request_msg.c_str(), client_ctx->request_msg.length(), 0);
           client_ctx->requests_sent++;
@@ -235,7 +267,7 @@ int sample_client_callback(picoquic_cnx_t *cnx,
     break;
   case picoquic_callback_ready:
   {
-    // std::cout << "Client callback: ready length " << length << std::endl;
+    std::cout << client_ctx->cnx_id << " : Client callback ready, length = " << length << std::endl;
     int is_unidir = 0;
     uint64_t stream_id = picoquic_get_next_local_stream_id(cnx, is_unidir);
     // std::cout << "Steam id:" << stream_id << std::endl;
@@ -244,6 +276,7 @@ int sample_client_callback(picoquic_cnx_t *cnx,
     client_ctx->start_timestamp = std::chrono::high_resolution_clock::now();
 
     // Send some data
+    std::cout << client_ctx->cnx_id << " : send first data, size = " << client_ctx->request_msg.c_str() << std::endl;
     picoquic_add_to_stream(cnx, stream_id, (const uint8_t *)client_ctx->request_msg.c_str(), client_ctx->request_msg.length(), 0);
     client_ctx->requests_sent++;
 

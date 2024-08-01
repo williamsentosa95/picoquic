@@ -97,10 +97,10 @@ int sample_server_callback(picoquic_cnx_t *cnx,
 
     // Send a response
     long num_bytes = strtol(data.c_str(), NULL, 10);
-    // std::cout << "Requested size is " << num_bytes << std::endl;
+    std::cout << "Requested size is " << num_bytes << std::endl;
     // server_ctx->send_times[server_ctx->response_count] = std::chrono::high_resolution_clock::now().time_since_epoch().count();
     picoquic_add_to_stream(cnx, stream_id, (uint8_t *)msg.c_str(), num_bytes, 0);
-    // std::cout << "Server callback: response sent" << std::endl;
+    std::cout << "Server callback: response sent" << std::endl;
     // server_ctx->response_count++;
     // if (server_ctx->response_count == server_ctx->total_requests)
     // {

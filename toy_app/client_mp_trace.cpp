@@ -9,6 +9,16 @@
 #include <cstdlib>
 #include <fstream>
 #include <autoqlog.h>
+#include <sstream>
+#include <string>
+
+using namespace std;
+
+typedef struct st_traffic_entry {
+  int time_ms;
+  int req_length_bytes;
+  int priority;
+} traffic_entry;
 
 typedef struct st_client_app_ctx_t
 {
@@ -18,6 +28,7 @@ typedef struct st_client_app_ctx_t
   std::string request_msg;
   long total_bytes_received;
   long current_request_bytes_received;
+  vector<traffic_entry> traffic_traces;
   // std::vector<std::string> responses;
   // int *time_taken;
   long *start_times;
@@ -31,13 +42,42 @@ int sample_client_callback(picoquic_cnx_t *cnx,
                            uint64_t stream_id, uint8_t *bytes, size_t length,
                            picoquic_call_back_event_t fin_or_event, void *callback_ctx, void *v_stream_ctx);
 
+vector<traffic_entry> import_traffic_traces(string fpath) {
+  vector<traffic_entry> results;
+  ifstream file(fpath);
+  if (file.is_open()) {
+    string line;
+    traffic_entry entry;
+    while (getline(file, line)) {
+      stringstream ss(line);
+      string substr;
+      if (ss.good()) {
+        getline(ss, substr, ',');
+        entry.time_ms = stoi(substr);
+        getline(ss, substr, ',');
+        entry.req_length_bytes = stoi(substr);
+        getline(ss, substr, ',');
+        entry.priority = stoi(substr);
+      }
+      results.push_back(entry);
+    }
+  }
+  return results;
+}
+
+void print_traffic_traces(const vector<traffic_entry>& traces) {
+  for (int i=0; i<traces.size(); i++) {
+    printf("%d %d %d\n", traces.at(i).time_ms, traces.at(i).req_length_bytes, traces.at(i).priority);
+  }
+}
+
 int main(int argc, char *argv[])
 {
   std::cout << "Client started" << std::endl;
 
-  if (argc != 4)
+  if (argc != 3)
   {
-    std::cout << "Usage: ./client_toy_mp <total_requests> <bytes_requested> <output_file>" << std::endl;
+    std::cout << "Usage: ./client_toy_mp <traffic_trace> <output_file>" << std::endl;
     return -1;
   }
 
@@ -51,6 +91,8 @@ int main(int argc, char *argv[])
   uint64_t current_time = picoquic_current_time();
   char* qlog_dir = "/home/william/qlog";
   
+  vector<traffic_entry> traffic_traces = import_traffic_traces(std::string(argv[1]));
+  // print_traffic_traces(traffic_traces);
 
   // Create a quic context
   quic = picoquic_create(1, NULL, NULL, NULL, default_alpn, NULL, NULL,
@@ -92,18 +134,15 @@ int main(int argc, char *argv[])
   // char message[] = "10000";
 
   client_app_ctx_t *client_ctx = new client_app_ctx_t();
-  client_ctx->total_requests = atoi(argv[1]);
+  client_ctx->traffic_traces = traffic_traces;
   // std::cout << "Total requests: " << client_ctx->total_requests << std::endl;
   client_ctx->requests_sent = 0;
-  client_ctx->bytes_requested = strtol(argv[2], NULL, 10);
-  // std::cout << "Bytes requested: " << client_ctx->bytes_requested << std::endl;
-  client_ctx->request_msg = std::string(argv[2]);
   client_ctx->total_bytes_received = 0;
   client_ctx->current_request_bytes_received = 0;
   // client_ctx->time_taken = new int[client_ctx->total_requests];
   client_ctx->start_times = new long[client_ctx->total_requests];
   client_ctx->end_times = new long[client_ctx->total_requests];
-  client_ctx->output_file = std::string(argv[3]);
+  client_ctx->output_file = std::string(argv[2]);
 
   // printf("Starting connection to %s, port %d\n", server_name, server_port);
 
@@ -119,38 +158,15 @@ int main(int argc, char *argv[])
   {
     /* Printing out the initial CID, which is used to identify log files */
     picoquic_connection_id_t icid = picoquic_get_initial_cnxid(cnx);
-    // printf("Initial connection ID: ");
-    // for (uint8_t i = 0; i < icid.id_len; i++)
-    // {
-    //   printf("%02x", icid.id[i]);
-    // }
-    // printf("\n");
   }
-
-  /* Obtain the next available stream ID in the local category */
-  // int is_unidir = 0;
-  // uint64_t stream_id = picoquic_get_next_local_stream_id(cnx, is_unidir);
-
-  // // Timestamp
-  // client_ctx->start_timestamp = std::chrono::high_resolution_clock::now();
-
-  // //  some data
-  // ret = picoquic_add_to_stream(cnx, stream_id, (const uint8_t *)client_ctx->request_msg.c_str(), client_ctx->request_msg.length(), 0);
-  // client_ctx->requests_sent++;
-
-  // if (ret < 0)
-  // {
-  //   fprintf(stderr, "Could not send data\n");
-  // }
 
   /* Wait for packets */
   ret = picoquic_packet_loop(quic, 0, server_address.sin_family, 0, 0, 0, NULL, NULL);
 
-  /* Free the Client context */
-  // sample_client_free_context(&client_ctx);
-
   return ret;
 }
+
+// TODO: Add delimiter to the message
 
 int sample_client_callback(picoquic_cnx_t *cnx,
                            uint64_t stream_id, uint8_t *bytes, size_t length,
@@ -189,7 +205,6 @@ int sample_client_callback(picoquic_cnx_t *cnx,
       client_ctx->start_times[req_id] = client_ctx->start_timestamp.time_since_epoch().count();
       client_ctx->end_times[req_id] = client_ctx->end_timestamp.time_since_epoch().count();
       float duration = (client_ctx->end_times[req_id] - client_ctx->start_times[req_id]) / 1e6;
-      std::cout << "ID " << req_id << ", received = " << client_ctx->current_request_bytes_received << ", duration = " << duration << " ms" << std::endl;
       client_ctx->current_request_bytes_received = 0;
 
       printf("Stream ID=%d, Req ID=%d, duration=%.2f\n", stream_id, req_id, duration);
@@ -279,7 +294,7 @@ int sample_client_callback(picoquic_cnx_t *cnx,
     std::cout << "Client callback: path available" << std::endl;
     int is_unidir = 0;
     uint64_t stream_id = picoquic_get_next_local_stream_id(cnx, is_unidir);
-    std::cout << "Steam id:" << stream_id << std::endl;
+    // std::cout << "Steam id:" << stream_id << std::endl;
 
     // Timestamp
     client_ctx->start_timestamp = std::chrono::high_resolution_clock::now();

@@ -133,6 +133,7 @@ typedef struct st_client_http_ctx_t
     int connection_closed;
     int connection_ready;
     int connection_mp_probed;
+    int connection_mp_ready;
     picoquic_alpn_enum alpn;
 } picoquic_http_client_callback_ctx; // Context for callback for each connections
 
@@ -331,28 +332,33 @@ int picoquic_http_client_callback(picoquic_cnx_t* cnx,
         {
             printf("Connection %d is ready!\n", ctx->cnx_id);
             ctx->connection_ready = 1;
-            // if (ctx->connection_mp_probed != 1) {
-            //     // probe a new path (SAT)
-            //     struct sockaddr_storage addr_from;
-            //     int addr_from_is_name = 0;
-            //     struct sockaddr_storage addr_to;
-            //     int addr_to_is_name = 0;
-            //     int my_port = ntohs(((sockaddr_in *)&cnx->path[0]->local_addr)->sin_port);
+            if (ctx->connection_mp_probed != 1) {
+                // probe a new path (SAT)
+                struct sockaddr_storage addr_from;
+                int addr_from_is_name = 0;
+                struct sockaddr_storage addr_to;
+                int addr_to_is_name = 0;
+                int my_port = ntohs(((sockaddr_in *)&cnx->path[0]->local_addr)->sin_port);
 
-            //     picoquic_get_server_address(SERVER_ADDRESS, SERVER_PORT, &addr_from, &addr_from_is_name); // remote addr
-            //     picoquic_get_server_address(SECOND_IFACE_IP, my_port, &addr_to, &addr_to_is_name);   // local addr
+                picoquic_get_server_address(SERVER_ADDRESS, SERVER_PORT, &addr_from, &addr_from_is_name); // remote addr
+                picoquic_get_server_address(SECOND_IFACE_IP, my_port, &addr_to, &addr_to_is_name);   // local addr
 
-            //     int ret_probe = picoquic_probe_new_path_ex(cnx, (struct sockaddr *)&addr_from, (struct sockaddr *)&addr_to, 0, picoquic_current_time(), 0);
+                int ret_probe = picoquic_probe_new_path_ex(cnx, (struct sockaddr *)&addr_from, (struct sockaddr *)&addr_to, 0, picoquic_current_time(), 0);
 
-            //     if (ret_probe == 0) {
-            //         printf("Cnx %d : Probe successful\n", ctx->cnx_id);
-            //         ctx->connection_mp_probed = 1;
-            //     } else {
-            //         printf("!!! Cnx %d : Probe failed\n", ctx->cnx_id);
-            //     }
-            // }
+                if (ret_probe == 0) {
+                    printf("Cnx %d : Probe successful\n", ctx->cnx_id);
+                    ctx->connection_mp_probed = 1;
+                } else {
+                    printf("!!! Cnx %d : Probe failed\n", ctx->cnx_id);
+                }
+            }
             break;
         }  
+        case picoquic_callback_path_available:
+        {
+            ctx->connection_mp_ready = 1;
+            printf("Cnx %d : Second path is ready!!\n", ctx->cnx_id);
+        }
         case picoquic_callback_request_alpn_list:
             printf("Set ALPN list\n");
             picoquic_client_set_alpn_list((void*)bytes);
@@ -455,14 +461,16 @@ int send_requests_from_queue(quic_connection * quic_cnx) {
     int sent = 0;
     queue<network_request> *request_queue = quic_cnx->request_queue;
     picoquic_cnx_t* cnx = quic_cnx->cnx;
+    picoquic_http_client_callback_ctx * callback_ctx = quic_cnx->cnx_ctx;
 
     network_lock.lock();
     
     while(!request_queue->empty()) {
         network_request request = request_queue->front();
         printf("Trying to send H3 request, cnx_id=%d, size=%d, url=%s, stream_id=%d!\n", quic_cnx->cnx_id, request.file_size, request.url.c_str(), quic_cnx->curr_stream_id);
-        if (picoquic_get_cnx_state(cnx) == picoquic_state_ready ||
-            picoquic_get_cnx_state(cnx) == picoquic_state_client_ready_start ) {
+        if ((picoquic_get_cnx_state(cnx) == picoquic_state_ready ||
+            picoquic_get_cnx_state(cnx) == picoquic_state_client_ready_start) &&  
+            callback_ctx->connection_mp_ready == 1) {
             if (quic_cnx->h3_initialized == 0) {
                 h3zero_protocol_init(cnx);
                 quic_cnx->h3_initialized = 1;
@@ -482,7 +490,7 @@ int send_requests_from_queue(quic_connection * quic_cnx) {
             client_open_stream(cnx, quic_cnx->cnx_ctx, stream_id, doc_name.c_str());
             request_queue->pop();
         } else {
-            printf("Picoquic connection is not ready to send yet!, still in stat=%d\n", picoquic_get_cnx_state(cnx));
+            printf("Picoquic connection is not ready to send yet!, still in stat=%d, mp_probed=%d\n", picoquic_get_cnx_state(cnx), callback_ctx->connection_mp_ready);
             break;
         }
     }
@@ -543,9 +551,11 @@ int picoquic_client_sending_loop_callback(picoquic_quic_t* quic, picoquic_packet
                             picoquic_supported_versions[cnx->version_index].version,
                             (unsigned long long)picoquic_val64_connection_id(picoquic_get_logging_cnxid(cnx)),
                             cnx->is_hcid_verified);
-                        quic_cnx->established = 1;
-                        if (!quic_cnx->request_queue->empty()) {
-                            send_requests_from_queue(quic_cnx);
+                        if (quic_cnx->cnx_ctx->connection_mp_ready == 1) {
+                            quic_cnx->established = 1;
+                            if (!quic_cnx->request_queue->empty()) {
+                                send_requests_from_queue(quic_cnx);
+                            }
                         }
                     }
                 }
@@ -732,6 +742,8 @@ int initialize_http3_client(char* server_name, int server_port) {
         ret = picoquic_perflog_setup(qclient, config.performance_log);
     }
 
+    picoquic_set_default_multipath_option(qclient, 1);  // Enable multipath
+    picoquic_enable_path_callbacks_default(qclient, 1); // Enable path callbacks e.g path available, path suspended, etc.
     picoquic_set_default_congestion_algorithm(qclient, picoquic_cubic_algorithm); // Set to cubic
 
     loop_ctx.quic_cnxs = &quic_cnxs;
@@ -792,10 +804,9 @@ int main(int argc, char *argv[]) {
 
     initialize_http3_client(SERVER_ADDRESS, server_port);
     sleep(1);
-    add_request_to_client(1000000, "hello1", 0);
+    add_request_to_client(100000, "hello1", 0);
     // add_request_to_client(200000, "hello2", 1);
-    // sleep(1);
-    // add_request_to_client(400000, "hello3", 0);
+    // add_request_to_client(400000, "hello3", 1);
     // add_request_to_client(15000, "hello3", 1);
     // sleep(2);
     // add_request_to_client(100000, "hello1", 0);

@@ -319,6 +319,7 @@ int quic_server(const char* server_name, picoquic_quic_config_t * config, int ju
 
                 picoquic_set_default_multipath_option(qserver, 1);  // Enable multipath
                 picoquic_enable_path_callbacks_default(qserver, 1); // Enable path callbacks
+                picoquic_set_default_congestion_algorithm(qserver, picoquic_cubic_algorithm); // Set to cubic
 
                 if (config->qlog_dir != NULL)
                 {

@@ -241,6 +241,10 @@ extern "C" {
     int h3zero_callback(picoquic_cnx_t* cnx,
         uint64_t stream_id, uint8_t* bytes, size_t length,
         picoquic_call_back_event_t fin_or_event, void* callback_ctx, void* v_stream_ctx);
+    
+    int h3zero_callback_mp(picoquic_cnx_t* cnx,
+        uint64_t stream_id, uint8_t* bytes, size_t length,
+        picoquic_call_back_event_t fin_or_event, void* callback_ctx, void* v_stream_ctx);
 
     h3zero_stream_prefix_t* h3zero_find_stream_prefix(h3zero_callback_ctx_t* ctx, uint64_t prefix);
     int h3zero_declare_stream_prefix(h3zero_callback_ctx_t* ctx, uint64_t prefix, picohttp_post_data_cb_fn function_call, void* function_ctx);

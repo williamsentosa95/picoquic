@@ -959,15 +959,6 @@ int h3zero_process_request_frame(
 				(stream_ctx->echo_length == 0) ? h3zero_content_type_text_html :
 				h3zero_content_type_text_plain);
 		}
-		// stream_ctx->echo_length = 100000;
-		// response_length = (stream_ctx->echo_length == 0) ?
-		// 		strlen(h3zero_server_default_page) : stream_ctx->echo_length;
-		// char log_text[256];
-		// char* get_filename = picoquic_uint8_to_str(log_text, 256, stream_ctx->ps.stream_state.header.path, stream_ctx->ps.stream_state.header.path_length);
-		// printf("Process GET %s, response length=%d bytes\n", get_filename, response_length);
-		// o_bytes = h3zero_create_response_header_frame(o_bytes, o_bytes_max,
-		// 	(stream_ctx->echo_length == 0) ? h3zero_content_type_text_html :
-		// 	h3zero_content_type_text_plain);
 	}
 	else if (stream_ctx->ps.stream_state.header.method == h3zero_method_post) {
 		/* Manage Post. */
@@ -1087,11 +1078,13 @@ int h3zero_process_request_frame(
 			if (is_fin_stream && stream_ctx->ps.stream_state.header.method == h3zero_method_connect) {
 				picoquic_log_app_message(cnx, "Setting FIN in connect response on stream: %"PRIu64, stream_ctx->stream_id);
 			}
-			printf("Total response length = %d\n", o_bytes - buffer);
 			ret = picoquic_add_to_stream_with_ctx(cnx, stream_ctx->stream_id,
 				buffer, o_bytes - buffer, is_fin_stream, stream_ctx);
 
-			printf("Finish putting data to buffer, stream_id=%d!\n", stream_ctx->stream_id);
+			printf("Finish putting data to buffer, stream_id=%d, cnx_id=%d, cnx_nbpaths=%d\n", stream_ctx->stream_id, cnx->initial_cnxid.id, cnx->nb_paths);
+			for (int i=0; i<cnx->nb_paths; i++) {
+				printf("Path %d: bytes_sent=%d\n", i, cnx->path[i]->bytes_sent);
+			}
 			if (ret != 0) {
 				o_bytes = NULL;
 			}
@@ -1806,6 +1799,138 @@ int h3zero_callback(picoquic_cnx_t* cnx,
 
 	return ret;
 }
+
+
+/* Picoquic callback for H3 connections for multipath.
+ */
+int h3zero_callback_mp(picoquic_cnx_t* cnx,
+	uint64_t stream_id, uint8_t* bytes, size_t length,
+	picoquic_call_back_event_t fin_or_event, void* callback_ctx, void* v_stream_ctx)
+{
+	int ret = 0;
+	h3zero_callback_ctx_t* ctx = NULL;
+	h3zero_stream_ctx_t* stream_ctx = (h3zero_stream_ctx_t*)v_stream_ctx;
+	uint64_t fin_stream_id = UINT64_MAX;
+
+	if (callback_ctx == NULL || callback_ctx == picoquic_get_default_callback_context(cnx->quic)) {
+		ctx = h3zero_callback_create_context((picohttp_server_parameters_t *)callback_ctx);
+		if (ctx == NULL) {
+			/* cannot handle the connection */
+			picoquic_close(cnx, PICOQUIC_ERROR_MEMORY);
+			return -1;
+		}
+		else {
+			picoquic_set_callback(cnx, h3zero_callback_mp, ctx);
+			ret = h3zero_protocol_init(cnx);
+		}
+	} else{
+		ctx = (h3zero_callback_ctx_t*)callback_ctx;
+	}
+
+	if (ret == 0) {
+		switch (fin_or_event) {
+		case picoquic_callback_stream_data:
+		case picoquic_callback_stream_fin:
+			/* Data arrival on stream #x, maybe with fin mark */
+			ret = h3zero_callback_data(cnx, stream_id, bytes, length,
+				fin_or_event, ctx, stream_ctx, &fin_stream_id);
+			break;
+		case picoquic_callback_stream_reset: /* Peer reset stream #x */
+		case picoquic_callback_stop_sending: /* Peer asks server to reset stream #x */
+											 /* TODO: special case for uni streams. */
+			if (stream_ctx == NULL) {
+				stream_ctx = h3zero_find_stream(ctx, stream_id);
+			}
+			if (stream_ctx != NULL) {
+				/* reset post callback. */
+				if (stream_ctx->path_callback != NULL) {
+					ret = stream_ctx->path_callback(cnx, NULL, 0, picohttp_callback_reset, stream_ctx, stream_ctx->path_callback_ctx);
+				}
+
+			    /* If a file is open on a client, close and do the accounting. */
+				ret = h3zero_client_close_stream(cnx, ctx, stream_ctx);
+			}
+			if (IS_BIDIR_STREAM_ID(stream_id)) {
+				picoquic_reset_stream(cnx, stream_id, 0);
+			}
+			break;
+		case picoquic_callback_stateless_reset:
+		case picoquic_callback_close: /* Received connection close */
+		case picoquic_callback_application_close: /* Received application close */
+			if (cnx->client_mode) {
+				if (!ctx->no_print) {
+					fprintf(stdout, "Received a %s\n",
+						(fin_or_event == picoquic_callback_close) ? "connection close request" : (
+							(fin_or_event == picoquic_callback_application_close) ?
+							"request to close the application" :
+							"stateless reset"));
+				}
+				ctx->connection_closed = 1;
+				break;
+			}
+			else {
+				picoquic_log_app_message(cnx, "Clearing context on connection close (%d)", fin_or_event);
+				h3zero_callback_delete_context(cnx, ctx);
+				picoquic_set_callback(cnx, NULL, NULL);
+			}
+			break;
+		case picoquic_callback_version_negotiation:
+			if (cnx->client_mode && !ctx->no_print) {
+				fprintf(stdout, "Received a version negotiation request:");
+				for (size_t byte_index = 0; byte_index + 4 <= length; byte_index += 4) {
+					uint32_t vn = PICOPARSE_32(bytes + byte_index);
+					fprintf(stdout, "%s%08x", (byte_index == 0) ? " " : ", ", vn);
+				}
+				fprintf(stdout, "\n");
+			}
+			break;
+		case picoquic_callback_stream_gap:
+			/* Gap indication, when unreliable streams are supported */
+			ret = -1;
+			break;
+		case picoquic_callback_prepare_to_send:
+			ret = h3zero_callback_prepare_to_send(cnx, stream_id, stream_ctx, (void*)bytes, length, ctx);
+			break;
+		case picoquic_callback_datagram: /* Datagram frame has been received */
+			ret = h3zero_callback_datagram(cnx, bytes, length, ctx);
+			break;
+		case picoquic_callback_prepare_datagram: /* Prepare the next datagram */
+			ret = h3zero_callback_prepare_datagram(cnx, bytes, length, ctx);
+			break;
+		case picoquic_callback_datagram_acked: /* Ack for packet carrying datagram-frame received from peer */
+		case picoquic_callback_datagram_lost: /* Packet carrying datagram-frame probably lost */
+		case picoquic_callback_datagram_spurious: /* Packet carrying datagram-frame was not really lost */
+			/* datagram acknowledgements are not visible for now at the H3 layer, just ignore. */
+			break;
+		case picoquic_callback_almost_ready:
+		case picoquic_callback_ready:
+			/* TODO: Check that the transport parameters are what Http3 expects */
+			break;
+		case picoquic_callback_path_available:
+			printf("H3zero server callback: path available\n");
+			break;
+		case picoquic_callback_path_suspended:
+			printf("H3zero server callback: path suspended\n");
+			break;
+		case picoquic_callback_path_deleted:
+			printf("H3zero server callback: path deleted\n");
+			break;
+		case picoquic_callback_path_quality_changed:
+			printf("H3zero server callback: path quality changed\n");
+			break;
+		default:
+			/* unexpected -- just ignore. */
+			break;
+		}
+	}
+
+	/* TODO: this is the plug-in for demo scenario manager.
+	 * Add code here so scenarios can play out.
+	 */
+
+	return ret;
+}
+
 
 /* Parse the settings frame.
  * Since this is done by reading a stream, the parsing state is

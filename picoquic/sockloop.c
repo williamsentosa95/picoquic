@@ -863,6 +863,7 @@ void* picoquic_packet_loop_v3(void* v_ctx)
                     send_msg_ptr);
 
                 if (ret == 0 && send_length > 0) {
+                    // printf("Prepare next packet to send, send_length = %d\n", send_length);
                     if (send_length > param->send_length_max) {
                         param->send_length_max = send_length;
                     }
