@@ -658,6 +658,8 @@ picoquic_quic_t* picoquic_create(uint32_t max_nb_connections,
         quic->cwin_max = UINT64_MAX;
         quic->sequence_hole_pseudo_period = PICOQUIC_DEFAULT_HOLE_PERIOD;
 
+        quic->start_time = current_time;
+
         picoquic_init_transport_parameters(&quic->default_tp, 0);
 
         quic->random_initial = 1;
@@ -2085,6 +2087,7 @@ int picoquic_assign_peer_cnxid_to_path(picoquic_cnx_t* cnx, int path_id)
 int picoquic_probe_new_path_ex(picoquic_cnx_t* cnx, const struct sockaddr* addr_peer,
     const struct sockaddr* addr_local, int if_index, uint64_t current_time, int to_preferred_address)
 {
+    printf("**** Probe new path ex is called!\n");
     int ret = 0;
     int partial_match_path = -1;
     int path_id = -1;

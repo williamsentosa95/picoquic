@@ -53,7 +53,7 @@ extern char const* h3zero_server_default_page;
 extern char const* h3zero_server_post_response_page;
 
 void h3zero_init_stream_tree(picosplay_tree_t* h3_stream_tree);
-int h3zero_server_parse_path(const uint8_t* path, size_t path_length, uint64_t* echo_size,
+int h3zero_server_parse_path(const uint8_t* path, size_t path_length, uint64_t* echo_size, 
     char** file_path, char const* web_folder, int* file_error);
 int h3zero_server_prepare_to_send(void* context, size_t space, h3zero_stream_ctx_t* stream_ctx);
 

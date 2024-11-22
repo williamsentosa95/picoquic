@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
   char* qlog_dir = "/home/william/qlog";
   
   vector<traffic_entry> traffic_traces = import_traffic_traces(std::string(argv[1]));
-  // print_traffic_traces(traffic_traces);
+  print_traffic_traces(traffic_traces);
 
   // Create a quic context
   quic = picoquic_create(1, NULL, NULL, NULL, default_alpn, NULL, NULL,

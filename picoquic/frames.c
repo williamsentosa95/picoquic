@@ -1778,21 +1778,30 @@ uint8_t* picoquic_format_available_stream_frames(picoquic_cnx_t* cnx, picoquic_p
         (cnx->is_multipath_enabled || cnx->is_simple_multipath_enabled)?path_x: NULL);
     int more_stream_data = 0;
 
+    int count = 0;
+    uint8_t *bytes_first = bytes_next;
     while (*ret == 0 && stream != NULL && stream->stream_priority <= current_priority && bytes_next < bytes_max) {
         int is_still_active = 0;
         bytes_next = picoquic_format_stream_frame(cnx, stream, bytes_next, bytes_max, &more_stream_data, is_pure_ack, &is_still_active, ret);
-
+        
+        // printf("Fill in bytes, count = %d, length = %d, ret=%d\n", count, bytes_next - bytes_first, *ret);
+        
         if (*ret == 0) {
             stream = picoquic_find_ready_stream_path(cnx,
                 (cnx->is_multipath_enabled || cnx->is_simple_multipath_enabled)?path_x: NULL);
-            if (stream != NULL && bytes_next + 17 >= bytes_max) {
+            if (stream != NULL) {
                 more_stream_data = 1;
                 break;
             }
+            // if (stream != NULL && bytes_next + 17 >= bytes_max) {
+            //     more_stream_data = 1;
+            //     break;
+            // }
         }
         else {
             break;
         }
+        count += 1;
     }
 
     *stream_tried_and_failed = (!more_stream_data && bytes_next == bytes_previous);

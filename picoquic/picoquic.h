@@ -36,6 +36,8 @@
 #include <unistd.h>
 #endif
 
+#include <stdio.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -1521,6 +1523,23 @@ typedef struct st_picoquic_alpn_list_t {
     char const* alpn_val;
     size_t len;
 } picoquic_alpn_list_t;
+
+/** Experimental!! Added function **/
+int is_mp_scheduling_active;
+char* packet_log_path;
+FILE* packet_log;
+uint64_t current_time;
+
+void picoquic_enable_mp_scheduling();
+int picoquic_set_packet_log(char* log_fpath);
+
+/* Add info on the total offset stream size */
+int picoquic_add_to_stream_with_ctx2(picoquic_cnx_t * cnx, uint64_t stream_id, const uint8_t * data, size_t length, int set_fin, int data_size, void * app_stream_ctx);
+
+void picoquic_cnx_id_to_string(char* text, picoquic_cnx_t* cnx);
+
+/** END **/
+
 
 #ifdef __cplusplus
 }

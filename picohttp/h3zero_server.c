@@ -31,6 +31,7 @@
 #include "democlient.h"
 
 #define REQUEST_FILESIZE_DELIMITTER "fszb-"
+#define SECOND_DELIM "-"
 
 /*
  * Incoming data call back.
@@ -149,15 +150,55 @@ char* split(char*str, const char * delim) {
     return p + strlen(delim);       // return tail substring
 }
 
-int get_file_size(char* str, char* delim) {
+// Parse text "/home/william/webtest/hello2fszb-500-34-45" into [500, 34, 45]
+char** parse_info(char* str, char* delim, char* second_delim, int *count) {
     char* tail = split(str, delim);
+    printf("TAIL = %s\n", tail);
     if (tail) {
-        return atoi(tail);
+        char *tempStr = strdup(tail);
+        if (tempStr == NULL) {
+            return NULL;
+        }
+
+        // Count token first
+        int tokenCount = 0;
+        char *tempToken = strtok(tempStr, second_delim);
+        while (tempToken != NULL) {
+            tokenCount++;
+            tempToken = strtok(NULL, second_delim);
+        }
+
+        // Allocate array of pointers for tokens
+        char **tokens = malloc(tokenCount * sizeof(char *));
+        if (tokens == NULL) {
+            free(tempStr);
+            return NULL;
+        }
+
+        // Copy input string again for the actual token extraction
+        strcpy(tempStr, tail);
+        int index = 0;
+        tempToken = strtok(tempStr, second_delim);
+        while (tempToken != NULL) {
+            tokens[index++] = strdup(tempToken); // Duplicate each token
+            tempToken = strtok(NULL, second_delim);
+        }
+
+        free(tempStr); // Free temporary string copy
+        *count = tokenCount; // Set token count
+        return tokens; // Return array of tokens
     }
-    return 0;
+    return NULL;
 }
 
-int h3zero_server_parse_path(const uint8_t * path, size_t path_length, uint64_t * echo_size, 
+void freeTokens(char **tokens, int count) {
+    for (int i = 0; i < count; i++) {
+        free(tokens[i]); // Free each token
+    }
+    free(tokens); // Free array of pointers
+}
+
+int h3zero_server_parse_path(const uint8_t * path, size_t path_length, uint64_t * echo_size, int * stream_priority,
     char ** file_path, char const * web_folder, int * file_error)
 {
     int ret = 0;
@@ -180,12 +221,27 @@ int h3zero_server_parse_path(const uint8_t * path, size_t path_length, uint64_t 
         ret = 0;
     }
 
-    printf("temp_file_path = %s\n", temp_path);
+    // printf("temp_file_path = %s\n", temp_path);
     char* delim = REQUEST_FILESIZE_DELIMITTER;
+    char* second_delim = SECOND_DELIM;
+    int file_size = 0;
+    int priority = 9;
     if (strstr(temp_path, delim)) {
-        int filesize = get_file_size(temp_path, delim);
-        printf("Extracted file size = %d\n", filesize);
-        *echo_size = filesize;
+        int info_count = 0;
+        char ** tokens = parse_info(temp_path, delim, second_delim, &info_count);
+
+        if (tokens != NULL) {
+            if (info_count >= 1) {
+                file_size = atoi(tokens[0]);
+            }
+            if (info_count >= 2) {
+                priority = atoi(tokens[1]);
+                *stream_priority = priority;
+            }
+            freeTokens(tokens, info_count);
+        }
+        printf("Extracted info: Filesize = %d, prio=%d\n", file_size, priority);
+        *echo_size = file_size;
     } else if (path_length > 1 && (path_length != 11 || memcmp(path, "/index.html", 11) != 0)) {
         uint64_t x = 0;
         for (size_t i = 1; i < path_length; i++) {

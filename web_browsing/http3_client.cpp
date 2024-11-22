@@ -288,7 +288,9 @@ int picoquic_http_client_callback(picoquic_cnx_t* cnx,
                             ongoing_requests.erase(it);
                         }
                         ongoing_request_lock.unlock();
-                        printf("Conn %d : Stream %d ended after %d bytes, network_time = %f ms, queue_time = %f ms\n", ctx->cnx_id, stream_id, stream_ctx->received_length, network_time, queue_time);
+                        char text[256];
+                        picoquic_cnx_id_to_string(text, cnx);
+                        printf("Conn %s : Stream %d ended after %d bytes, network_time = %f ms, queue_time = %f ms\n", text, stream_id, stream_ctx->received_length, network_time, queue_time);
                     }
                 }
             }
@@ -396,6 +398,8 @@ int picoquic_http_client_callback(picoquic_cnx_t* cnx,
 //     printf("Start cnx %d!\n", cnx_id);
 // }
 
+
+
 int client_open_stream(picoquic_cnx_t*cnx, picoquic_http_client_callback_ctx* ctx,
                         uint64_t stream_id, char const* doc_name) {
     int ret = 0;
@@ -478,7 +482,7 @@ int send_requests_from_queue(quic_connection * quic_cnx) {
             
             quic_cnx->curr_stream_id += 4;
             sent += 1;
-            float queue_time = chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now() - request.put_to_queue_time).count();
+            // float queue_time = chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now() - request.put_to_queue_time).count();
             client_open_stream(cnx, quic_cnx->cnx_ctx, stream_id, doc_name.c_str());
             request_queue->pop();
         } else {
@@ -792,19 +796,19 @@ int main(int argc, char *argv[]) {
 
     initialize_http3_client(SERVER_ADDRESS, server_port);
     sleep(1);
-    add_request_to_client(1000000, "hello1", 0);
-    // add_request_to_client(200000, "hello2", 1);
-    // sleep(1);
-    // add_request_to_client(400000, "hello3", 0);
+    add_request_to_client(50, "hello1", 0);
+    usleep(500000);
+    add_request_to_client(10000, "hello2", 0);
+    add_request_to_client(300, "hello3", 0);
+    // add_request_to_client(500, "hello2", 1, 1);6
+    // add_request_to_client(400000, "hello3", 1);
     // add_request_to_client(15000, "hello3", 1);
     // sleep(2);
     // add_request_to_client(100000, "hello1", 0);
     // add_request_to_client(20000, "hello2", 1);
-    // add_request_to_client(40000, "hello3", 0);
+    // add_request_to_client(40000, "hello3", 0);exit
     // add_request_to_client(150000, "hello3", 1);
-
-    sleep(5);
+    sleep(8);
     printf("Finish!!\n");
-
     return 0;
 }

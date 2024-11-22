@@ -897,7 +897,7 @@ Picoquic POST Response\
 <p>Received %d bytes.\r\n\
 </BODY></HTML>\r\n";
 
-int h3zero_server_parse_path(const uint8_t* path, size_t path_length, uint64_t* echo_size,
+int h3zero_server_parse_path(const uint8_t* path, size_t path_length, uint64_t* echo_size, int * stream_priority,
 	char** file_path, char const* web_folder, int* file_error);
 
 int h3zero_find_path_item(const uint8_t * path, size_t path_length, const picohttp_server_path_item_t * path_table, size_t path_table_nb)
@@ -939,7 +939,7 @@ int h3zero_process_request_frame(
 	if (stream_ctx->ps.stream_state.header.method == h3zero_method_get) {
 		/* Manage GET */
 		if (h3zero_server_parse_path(stream_ctx->ps.stream_state.header.path, stream_ctx->ps.stream_state.header.path_length,
-			&stream_ctx->echo_length, &stream_ctx->file_path, app_ctx->web_folder, &file_error) != 0) {
+			&stream_ctx->echo_length, &stream_ctx->priority, &stream_ctx->file_path, app_ctx->web_folder, &file_error) != 0) {
 			char log_text[256];
 			// printf("Process GET 2 request!!!\n");
 			picoquic_log_app_message(cnx, "Cannot find file for path: <%s> in folder <%s>, error: 0x%x",
@@ -1078,13 +1078,17 @@ int h3zero_process_request_frame(
 			if (is_fin_stream && stream_ctx->ps.stream_state.header.method == h3zero_method_connect) {
 				picoquic_log_app_message(cnx, "Setting FIN in connect response on stream: %"PRIu64, stream_ctx->stream_id);
 			}
-			ret = picoquic_add_to_stream_with_ctx(cnx, stream_ctx->stream_id,
-				buffer, o_bytes - buffer, is_fin_stream, stream_ctx);
+			// ret = picoquic_add_to_stream_with_ctx(cnx, stream_ctx->stream_id,
+			// 	buffer, o_bytes - buffer, is_fin_stream, stream_ctx);
+			ret = picoquic_add_to_stream_with_ctx2(cnx, stream_ctx->stream_id,
+				buffer, o_bytes - buffer, is_fin_stream, response_length + (o_bytes - buffer), stream_ctx);
 
-			printf("Finish putting data to buffer, stream_id=%d, cnx_id=%d, cnx_nbpaths=%d\n", stream_ctx->stream_id, cnx->initial_cnxid.id, cnx->nb_paths);
-			for (int i=0; i<cnx->nb_paths; i++) {
-				printf("Path %d: bytes_sent=%d\n", i, cnx->path[i]->bytes_sent);
-			}
+			picoquic_set_stream_priority(cnx, stream_ctx->stream_id, stream_ctx->priority);
+
+			printf("Finish putting data to buffer, stream_id=%d, prio=%d, cnx_id=%d, cnx_nbpaths=%d, total_length=%d\n", stream_ctx->stream_id, stream_ctx->priority, cnx->initial_cnxid.id, cnx->nb_paths, response_length + (o_bytes - buffer));
+			// for (int i=0; i<cnx->nb_paths; i++) {
+			// 	printf("Path %d: bytes_sent=%d\n", i, cnx->path[i]->bytes_sent);
+			// }
 			if (ret != 0) {
 				o_bytes = NULL;
 			}

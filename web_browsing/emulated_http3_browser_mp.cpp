@@ -13,6 +13,8 @@
 
 #else /* Linux */
 
+#define ENABLE_PICOQUIC_MP_SCHEDULING 0
+
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -35,12 +37,13 @@
 
 #endif
 
-#define SERVER_ADDR "100.64.0.1"
 #define SERVER_PORT 9000
-#define IFACE2 "100.64.0.4"
+
+#define SERVER_ADDRESS "100.64.0.1"
+#define SECOND_IFACE_IP "100.64.0.4"
 
 #define ENABLE_NET_LOG 1
-#define NET_LOG_PATH "/home/william/picoquic-project/net-log-mp.csv"
+#define NET_LOG_PATH "/home/william/picoquic-log/emulated_http_mp_log.csv"
 
 #include <iostream>
 #include <netinet/in.h>
@@ -229,6 +232,7 @@ typedef struct st_client_http_ctx_t
     int connection_closed;
     int connection_ready;
     int connection_mp_probed;
+    int connection_mp_ready;
     picoquic_alpn_enum alpn;
 } picoquic_http_client_callback_ctx; // Context for callback for each connections
 
@@ -387,10 +391,11 @@ int picoquic_http_client_callback(picoquic_cnx_t* cnx,
                             ongoing_requests.erase(it);
                         }
                         ongoingRequestMutex.unlock();
-
-                        printf("Conn %d, %s : Stream %d ended after %d bytes, network_time = %f ms, queue_time = %f ms\n", ctx->cnx_id, activity_id.c_str(), stream_id, stream_ctx->received_length, network_time, queue_time);
+                        char text[256];
+                        picoquic_cnx_id_to_string(text, cnx);
+                        printf("Conn %s, %s : Stream %d ended after %d bytes, network_time = %f ms, queue_time = %f ms\n", text, activity_id.c_str(), stream_id, stream_ctx->received_length, network_time, queue_time);
                         if (fp != NULL) {
-                            fprintf(fp, "%d,%s,%d,%d,%f,%f\n", ctx->cnx_id, activity_id.c_str(), stream_id, stream_ctx->received_length, network_time, queue_time);
+                            fprintf(fp, "%s,%s,%d,%d,%f,%f\n", text, activity_id.c_str(), stream_id, stream_ctx->received_length, network_time, queue_time);
                         }
 
                         if (activity_id != "") {
@@ -460,26 +465,27 @@ int picoquic_http_client_callback(picoquic_cnx_t* cnx,
             break;
         case picoquic_callback_almost_ready:
         {
-            if (ctx->connection_mp_probed != 1) {
-                // probe a new path (SAT)
-                struct sockaddr_storage addr_from;
-                int addr_from_is_name = 0;
-                struct sockaddr_storage addr_to;
-                int addr_to_is_name = 0;
-                int my_port = ntohs(((sockaddr_in *)&cnx->path[0]->local_addr)->sin_port);
+            printf("Connection %d is almost ready!\n", ctx->cnx_id);
+            // if (ctx->connection_mp_probed != 1) {
+            //     // probe a new path (SAT)
+            //     struct sockaddr_storage addr_from;
+            //     int addr_from_is_name = 0;
+            //     struct sockaddr_storage addr_to;
+            //     int addr_to_is_name = 0;
+            //     int my_port = ntohs(((sockaddr_in *)&cnx->path[0]->local_addr)->sin_port);
 
-                picoquic_get_server_address("100.64.0.1", SERVER_PORT, &addr_from, &addr_from_is_name); // remote addr
-                picoquic_get_server_address("100.64.0.4", my_port, &addr_to, &addr_to_is_name);   // local addr
+            //     picoquic_get_server_address("100.64.0.1", SERVER_PORT, &addr_from, &addr_from_is_name); // remote addr
+            //     picoquic_get_server_address("100.64.0.4", my_port, &addr_to, &addr_to_is_name);   // local addr
 
-                int ret_probe = picoquic_probe_new_path_ex(cnx, (struct sockaddr *)&addr_from, (struct sockaddr *)&addr_to, 0, picoquic_current_time(), 0);
+            //     int ret_probe = picoquic_probe_new_path_ex(cnx, (struct sockaddr *)&addr_from, (struct sockaddr *)&addr_to, 0, picoquic_current_time(), 0);
 
-                if (ret_probe == 0) {
-                    printf("Cnx %d : Probe successful\n", ctx->cnx_id);
-                    ctx->connection_mp_probed = 1;
-                } else {
-                    printf("!!! Cnx %d : Probe failed\n", ctx->cnx_id);
-                }
-            }
+            //     if (ret_probe == 0) {
+            //         printf("Cnx %d : Probe successful\n", ctx->cnx_id);
+            //         ctx->connection_mp_probed = 1;
+            //     } else {
+            //         printf("!!! Cnx %d : Probe failed\n", ctx->cnx_id);
+            //     }
+            // }
         }
         case picoquic_callback_ready:
         {
@@ -506,7 +512,12 @@ int picoquic_http_client_callback(picoquic_cnx_t* cnx,
             //     }
             // }
             break;
-        }  
+        } 
+        case picoquic_callback_path_available:
+        {
+            ctx->connection_mp_ready = 1;
+            printf("Cnx %d : Second path is ready!!\n", ctx->cnx_id);
+        } 
         case picoquic_callback_request_alpn_list:
             // printf("Set ALPN list\n");
             picoquic_client_set_alpn_list((void*)bytes);
@@ -598,7 +609,7 @@ int client_open_stream(picoquic_cnx_t*cnx, picoquic_http_client_callback_ctx* ct
 
     assert(ret == 0);
     // Send the request
-    ret = picoquic_add_to_stream_with_ctx(cnx, stream_ctx->stream_id, buffer, request_length, 1, stream_ctx);
+    ret = picoquic_add_to_stream_with_ctx2(cnx, stream_ctx->stream_id, buffer, request_length, 1, request_length, stream_ctx);
 
     return ret;
 }
@@ -608,13 +619,15 @@ int send_requests_from_queue(quic_connection * quic_cnx) {
     int sent = 0;
     queue<network_request> *request_queue = quic_cnx->request_queue;
     picoquic_cnx_t* cnx = quic_cnx->cnx;
+    picoquic_http_client_callback_ctx * callback_ctx = quic_cnx->cnx_ctx;
 
     network_lock.lock();
     while(!request_queue->empty()) {
         network_request request = request_queue->front();
         // printf("Trying to send H3 request, cnx_id=%d, size=%d, url=%s, activity_id=%s, stream_id=%d!\n", quic_cnx->cnx_id, request.file_size, request.url.c_str(), request.activity_id.c_str(), quic_cnx->curr_stream_id);
         if (picoquic_get_cnx_state(cnx) == picoquic_state_ready ||
-            picoquic_get_cnx_state(cnx) == picoquic_state_client_ready_start ) {
+            picoquic_get_cnx_state(cnx) == picoquic_state_client_ready_start &&  
+            callback_ctx->connection_mp_ready == 1) {
             if (quic_cnx->h3_initialized == 0) {
                 h3zero_protocol_init(cnx);
                 quic_cnx->h3_initialized = 1;
@@ -623,22 +636,22 @@ int send_requests_from_queue(quic_connection * quic_cnx) {
             // string doc_name = "/fszb-" + to_string(request.file_size); 
             string doc_name = "/" + request.url + request_filesize_delimitter + to_string(request.file_size); 
             string fname = "_" + to_string(request.file_size);
-            client_open_stream(cnx, quic_cnx->cnx_ctx, stream_id, doc_name.c_str());
-            request.send_time = chrono::steady_clock::now();
             // Put to ongoing
             string key = to_string(quic_cnx->cnx_id) + ":" + to_string(stream_id);
             
             ongoingRequestMutex.lock();
+            request.send_time = chrono::steady_clock::now();
             ongoing_requests[key] = request;
             ongoingRequestMutex.unlock();
             
             quic_cnx->curr_stream_id += 4;
             sent += 1;
             // float queue_time = chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now() - request.put_to_queue_time).count();
+            client_open_stream(cnx, quic_cnx->cnx_ctx, stream_id, doc_name.c_str());
             // printf("Request sent, queue_time=%f ms\n", queue_time);
             request_queue->pop();
         } else {
-            // printf("Picoquic connection is not ready to send yet!, still in stat=%d\n", picoquic_get_cnx_state(cnx));
+            printf("Picoquic connection is not ready to send yet!, still in stat=%d, mp_probed=%d\n", picoquic_get_cnx_state(cnx), callback_ctx->connection_mp_ready);
             break;
         }
     }
@@ -667,6 +680,7 @@ int picoquic_client_sending_loop_callback(picoquic_quic_t* quic, picoquic_packet
             for (int i = 0; i<ctx->quic_cnxs->size(); i++) {
                 quic_connection * quic_cnx = ctx->quic_cnxs->at(i);
                 picoquic_cnx_t *cnx = quic_cnx->cnx;
+                picoquic_http_client_callback_ctx *cnx_ctx = quic_cnx->cnx_ctx;
                 if (picoquic_get_cnx_state(cnx) == picoquic_state_client_almost_ready && quic_cnx->notified_ready == 0) {
                     /* if almost ready, display results of negotiation */
                     if (picoquic_tls_is_psk_handshake(cnx)) {
@@ -682,6 +696,27 @@ int picoquic_client_sending_loop_callback(picoquic_quic_t* quic, picoquic_packet
                     // }
                     // fprintf(stdout, "Almost ready!\n");
                     quic_cnx->notified_ready = 1;
+                } else if (picoquic_get_cnx_state(cnx) == picoquic_state_ready || picoquic_get_cnx_state(cnx) == picoquic_state_client_ready_start) {
+                    if (cnx_ctx->connection_mp_probed != 1) {
+                        // probe a new path (SAT)
+                        struct sockaddr_storage addr_from;
+                        int addr_from_is_name = 0;
+                        struct sockaddr_storage addr_to;
+                        int addr_to_is_name = 0;
+                        int my_port = ntohs(((sockaddr_in *)&cnx->path[0]->local_addr)->sin_port);
+
+                        picoquic_get_server_address(SERVER_ADDRESS, SERVER_PORT, &addr_from, &addr_from_is_name); // remote addr
+                        picoquic_get_server_address(SECOND_IFACE_IP, my_port, &addr_to, &addr_to_is_name);   // local addr
+
+                        int ret_probe = picoquic_probe_new_path_ex(cnx, (struct sockaddr *)&addr_from, (struct sockaddr *)&addr_to, 0, picoquic_current_time(), 0);
+
+                        if (ret_probe == 0) {
+                            printf("Cnx %d : Probe successful\n", cnx_ctx->cnx_id);
+                            cnx_ctx->connection_mp_probed = 1;
+                        } else {
+                            printf("!!! Cnx %d : Probe failed\n", cnx_ctx->cnx_id);
+                        }
+                    }
                 }
             }
             break;
@@ -694,13 +729,15 @@ int picoquic_client_sending_loop_callback(picoquic_quic_t* quic, picoquic_packet
                 if (quic_cnx->established == 0) {
                     if (picoquic_get_cnx_state(cnx) == picoquic_state_ready ||
                     picoquic_get_cnx_state(cnx) == picoquic_state_client_ready_start) {
-                        printf("Connection established. Version = %x, I-CID: %llx, verified: %d\n",
-                            picoquic_supported_versions[cnx->version_index].version,
-                            (unsigned long long)picoquic_val64_connection_id(picoquic_get_logging_cnxid(cnx)),
-                            cnx->is_hcid_verified);
-                        quic_cnx->established = 1;
-                        if (!quic_cnx->request_queue->empty()) {
-                            send_requests_from_queue(quic_cnx);
+                        if (quic_cnx->cnx_ctx->connection_mp_ready == 1) {
+                            printf("Connection fully established. Version = %x, I-CID: %llx, verified: %d\n",
+                                picoquic_supported_versions[cnx->version_index].version,
+                                (unsigned long long)picoquic_val64_connection_id(picoquic_get_logging_cnxid(cnx)),
+                                cnx->is_hcid_verified);
+                            quic_cnx->established = 1;
+                            if (!quic_cnx->request_queue->empty()) {
+                                send_requests_from_queue(quic_cnx);
+                            }
                         }
                     }
                 }
@@ -888,6 +925,7 @@ int initialize_http3_client(char* server_name, int server_port) {
         ret = picoquic_perflog_setup(qclient, config.performance_log);
     }
 
+    picoquic_set_default_congestion_algorithm(qclient, picoquic_cubic_algorithm); // Set to cubic
     picoquic_set_default_multipath_option(qclient, 1);  // Enable multipath
     picoquic_enable_path_callbacks_default(qclient, 1); // Enable path callbacks e.g path available, path suspended, etc.
 
@@ -923,7 +961,6 @@ int add_request_to_client(int filesize, string url, int cnx_id, string activity_
     } 
     
     if (!found) {
-
         quic_connection * quic_cnx = create_and_start_quic_connections(qclient, &server_addr, &config, quic_cnxs.size());
         quic_cnx->request_queue->push({filesize, url, cnx_id, activity_id, chrono::steady_clock::now()});
         quic_cnxs.push_back(quic_cnx);
@@ -997,7 +1034,8 @@ void browser(int thread_id) {
                     // Download files
                     printf("%d: %s, download url=%s, size=%d bytes, start=%f, end=%f, duration =%.f\n", thread_id, job.id.c_str(), url.c_str(), size_bytes, start_time, end_time, duration);
                     URLParser::HTTP_URL http_url = URLParser::Parse(url);
-                    int conn_id = get_connection_id(http_url.host);
+                    // int conn_id = get_connection_id(http_url.host);
+                    int conn_id = 0;
                     string path = get_url_path(http_url);
                     // printf("Host: %s, Path = %s\n", http_url.host.c_str(), path.c_str());
                     add_request_to_client(size_bytes, path, conn_id, job.id);
@@ -1057,7 +1095,7 @@ void browser(int thread_id) {
 
 int main(int argc, char *argv[]) {
     
-    char* server_addr = SERVER_ADDR;
+    char* server_addr = SERVER_ADDRESS;
     int server_port = SERVER_PORT;
 
     fp = fopen( NET_LOG_PATH, "w" );
@@ -1067,6 +1105,13 @@ int main(int argc, char *argv[]) {
     
 
     initialize_http3_client(server_addr, server_port);
+
+    if (ENABLE_PICOQUIC_MP_SCHEDULING) {
+        picoquic_enable_mp_scheduling();
+    }
+
+    char* packet_log = "/home/william/picoquic-log/client-packet.txt";
+    picoquic_set_packet_log(packet_log);
 
     string dep_fpath;
     if(argc > 1) {
@@ -1175,7 +1220,7 @@ int main(int argc, char *argv[]) {
     jobQueue.emplace(job);
     auto now = chrono::steady_clock::now();
         
-    int numThreads = 10;
+    int numThreads = 5;
     // Create and start the thread pool
     vector<thread> threadPool;
     for (int i = 0; i < numThreads; ++i) {

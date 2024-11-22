@@ -79,7 +79,7 @@
 #include "url_parser.h"
 
 #define ENABLE_NET_LOG 1
-#define NET_LOG_PATH "/home/william/picoquic-project/net-log.csv"
+#define NET_LOG_PATH "/home/william/picoquic-log/emulated_http_log.csv"
 
 #define STREAM_ID_INITIAL UINT64_MAX
 
@@ -946,7 +946,8 @@ void browser(int thread_id) {
                     // Download files
                     printf("%d: %s, download url=%s, size=%d bytes, start=%f, end=%f, duration =%.f\n", thread_id, job.id.c_str(), url.c_str(), size_bytes, start_time, end_time, duration);
                     URLParser::HTTP_URL http_url = URLParser::Parse(url);
-                    int conn_id = get_connection_id(http_url.host);
+                    // int conn_id = get_connection_id(http_url.host);
+                    int conn_id = 0;
                     string path = get_url_path(http_url);
                     // printf("Host: %s, Path = %s\n", http_url.host.c_str(), path.c_str());
                     add_request_to_client(size_bytes, path, conn_id, job.id);

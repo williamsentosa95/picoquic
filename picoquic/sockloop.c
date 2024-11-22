@@ -861,9 +861,9 @@ void* picoquic_packet_loop_v3(void* v_ctx)
                     send_buffer, send_buffer_size, &send_length,
                     &peer_addr, &local_addr, &if_index, &log_cid, &last_cnx,
                     send_msg_ptr);
-
+                
+                // printf("Prepare next packet to send, send_length = %d\n", send_length);
                 if (ret == 0 && send_length > 0) {
-                    // printf("Prepare next packet to send, send_length = %d\n", send_length);
                     if (send_length > param->send_length_max) {
                         param->send_length_max = send_length;
                     }

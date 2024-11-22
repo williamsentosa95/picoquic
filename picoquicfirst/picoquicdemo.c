@@ -494,7 +494,6 @@ static int simulate_migration(client_loop_cb_t* cb_ctx)
     } else {
         ((struct sockaddr_in*)&addr_from)->sin_port = htons(cb_ctx->local_port);
     }
-    printf("Probe new path is called!!\n");
     ret = picoquic_probe_new_path(cb_ctx->cnx_client,
         (struct sockaddr*)&cb_ctx->server_address,
         (struct sockaddr*)&addr_from,
@@ -563,7 +562,6 @@ int client_loop_cb(picoquic_quic_t* quic, picoquic_packet_loop_cb_enum cb_mode,
             else if (ret == 0 && (picoquic_get_cnx_state(cb_ctx->cnx_client) == picoquic_state_ready ||
                 picoquic_get_cnx_state(cb_ctx->cnx_client) == picoquic_state_client_ready_start)) {
                 int simulate_multipath = 0;
-
                 if (picoquic_get_cnx_state(cb_ctx->cnx_client) == picoquic_state_ready && cb_ctx->multipath_probe_done == 0) {
                     /* Create the required additional paths. 
                      * In some cases, we just want to test the software from a computer that is not actually

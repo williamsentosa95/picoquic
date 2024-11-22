@@ -1,10 +1,13 @@
 #include <iostream>
 #include <picoquic.h>
+#include "picoquic_utils.h"
 #include "picoquic_packet_loop.h"
+#include "picoquic_internal.h"
 #include <cmath>
 #include <chrono>
 #include <fstream>
 #include <autoqlog.h>
+#include <picoquic_logger.h>
 
 std::string msg(1000000000, 'a');
 
@@ -36,6 +39,7 @@ int main(int argc, char **argv)
   // char *default_alpn = "application layer protocol";
   uint64_t current_time = picoquic_current_time();
   char* qlog_dir = "/home/william/qlog";
+  char* packet_text_log = "/home/william/picoquic-log/server-log.txt";
 
   // Server app context
   // server_app_ctx_t *server_ctx = new server_app_ctx_t();
@@ -52,6 +56,8 @@ int main(int argc, char **argv)
   picoquic_quic_t *quic = picoquic_create(10, server_cert, server_key, NULL, default_alpn, sample_server_callback, NULL,
                                           NULL, NULL, NULL, current_time, NULL,
                                           NULL, NULL, 0);
+  
+  // picoquic_enable_mp_scheduling();
 
   if (quic == NULL)
   {
@@ -63,6 +69,7 @@ int main(int argc, char **argv)
   picoquic_set_default_congestion_algorithm(quic, picoquic_cubic_algorithm);
   picoquic_set_default_multipath_option(quic, 1);  // Enable multipath
   picoquic_enable_path_callbacks_default(quic, 1); // Enable path callbacks
+  picoquic_set_textlog(quic, packet_text_log);
   // picoquic_set_key_log_file_from_env(quic);
   // picoquic_set_qlog(quic, qlog_dir);
   // picoquic_set_log_level(quic, 1);
@@ -99,7 +106,8 @@ int sample_server_callback(picoquic_cnx_t *cnx,
       std::cout << "Server callback: stream data, length=" << length << std::endl;
       std::string data = std::string((char *)bytes, length);
       long num_bytes = strtol(data.c_str(), NULL, 10);
-      picoquic_add_to_stream(cnx, stream_id, (uint8_t *)msg.c_str(), num_bytes, 0);
+      // picoquic_add_to_stream(cnx, stream_id, (uint8_t *)msg.c_str(), num_bytes, 0);
+      picoquic_add_to_stream_with_ctx2(cnx, stream_id, (uint8_t *)msg.c_str(), num_bytes, 1, num_bytes, stream_ctx);
       break;
     }
   case picoquic_callback_stream_fin: // Fin received from peer on stream N; data is optional

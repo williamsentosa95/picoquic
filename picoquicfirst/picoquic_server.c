@@ -61,6 +61,8 @@ static const char* default_server_name = "::";
 static const char* ticket_store_filename = "demo_ticket_store.bin";
 static const char* token_store_filename = "demo_token_store.bin";
 
+#define ENABLE_PICOQUIC_MP_SCHEDULING 1
+#define ENABLE_PACKET_LOGGING 1
 
 #include "picoquic.h"
 #include "picoquic_packet_loop.h"
@@ -347,6 +349,15 @@ int quic_server(const char* server_name, picoquic_quic_config_t * config, int ju
                 }
             }
         }
+    }
+
+    if (ENABLE_PICOQUIC_MP_SCHEDULING) {
+        picoquic_enable_mp_scheduling();
+    }
+
+    if (ENABLE_PACKET_LOGGING) {
+        char* log_path = "/home/william/picoquic-log/server-packet.txt";
+        picoquic_set_packet_log(log_path);
     }
 
     if (ret == 0) {
