@@ -1,0 +1,5 @@
+arrival_time_s,msg_size_byte,connection_id,msg_id,prio
+0.000000,100000,1,0,2
+0.05,100000,1,0,1
+0.5,20000,1,4,2
+0.55,200,1,4,2
