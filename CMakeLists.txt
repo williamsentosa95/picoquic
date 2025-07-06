@@ -563,6 +563,26 @@ if(BUILD_TESTING AND picoquic_BUILD_TESTS)
     target_include_directories(emulated_http3_browser_mp PRIVATE picohttp)
     set_picoquic_compile_settings(emulated_http3_browser_mp)
 
+    add_executable(dependency_analysis
+    web_browsing/dependency_analysis.cpp
+    picoquicfirst/getopt.c)
+    target_link_libraries(dependency_analysis
+        PRIVATE
+            ${PTLS_LIBRARIES}
+            ${OPENSSL_LIBRARIES}
+            ${MBEDTLS_LIBRARIES}
+            picoquic-log
+            picoquic-core
+            picohttp-core)
+    target_include_directories(dependency_analysis PRIVATE picohttp)
+    set_picoquic_compile_settings(dependency_analysis)
+
+    add_executable(emulated_browser_test
+    web_browsing/emulated-browser-test.cpp)
+    target_link_libraries(emulated_browser_test PRIVATE picoquic-log picoquic-core)
+    target_include_directories(emulated_browser_test PRIVATE loglib picoquic)
+    set_picoquic_compile_settings(emulated_browser_test)
+
 endif()
 
 # get all project files for formatting

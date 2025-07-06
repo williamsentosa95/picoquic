@@ -530,9 +530,7 @@ int picoquic_demo_client_callback(picoquic_cnx_t* cnx,
             }
 
             if (fin_or_event == picoquic_callback_stream_fin) {
-                printf("IN1\n");
                 if (picoquic_demo_client_close_stream(cnx, ctx, stream_ctx)) {
-                    printf("IN2\n");
                     fin_stream_id = stream_id;
                     if (stream_id <= 64 && !ctx->no_print) {
                         fprintf(stdout, "Stream %" PRIu64 " ended after %" PRIu64 " bytes\n",

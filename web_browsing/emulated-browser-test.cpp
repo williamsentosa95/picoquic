@@ -25,6 +25,8 @@ typedef struct st_activity {
 
 struct Job {
     string id;
+    vector<string> visited;
+    float duration_spent;
 };
 
 queue<Job> jobQueue;
@@ -35,6 +37,10 @@ map<string, json> activities;
 
 map<string, int> dependency_degree_mp;
 map<string, vector<Activity>> dependency_graph_mp;
+
+
+map<string, int> resource_dependency_degree_mp;
+map<string, vector<Activity>> resource_dependency_graph_mp;
 
 set<string> completed;
 bool finished = false;
@@ -75,7 +81,7 @@ bool is_sane(const string & job_id, const json & entry) {
 }
 
 // Shared variables: activities, completed, dependency_list, affected_activities, finished
-void browser(int thread_id) {
+void browser(int thread_id, const set<string> & critical_path) {
     int count = 0;
     Job job;
     bool acquired = false;
@@ -110,21 +116,14 @@ void browser(int thread_id) {
                     float start_time = activities[job.id]["startTime"];
                     float end_time = activities[job.id]["endTime"];
                     float duration = end_time - start_time;
-                    string priority = activities[job.id]["chromeAssignedPriority"];
-
-                    duration = 5;
-                    // if (priority.find("VeryHigh") != string::npos) {
-                    //     duration = 5;
-                    // } else if (priority.find("High") != string::npos) {
-                    //     duration = 5;
+                    // if (critical_path.find(job.id) != critical_path.end() && job.id.find("Networking_0") != string::npos) {
+                    //     duration = 0;
                     // }
-
-                    // if (job.id.find("Networking_0") != string::npos) {
-                    //     duration = 5;
+                    // if (critical_path.find(job.id) != critical_path.end()) {
+                    //     duration = 0;
                     // }
-
                     // Download files
-                    printf("%d: %s, download url=%s, prio=%s, size=%d bytes, start=%f, end=%f, duration =%.f\n", thread_id, job.id.c_str(), url.c_str(), priority.c_str(), start_time, end_time, duration);
+                    printf("%d: %s, download url=%s, size=%d bytes, start=%f, end=%f, duration =%.f\n", thread_id, job.id.c_str(), url.c_str(), size_bytes, start_time, end_time, duration);
                     std::this_thread::sleep_for(chrono::milliseconds((int) duration));
                 } else if (job.id.find("Loading") != string::npos || job.id.find("Scripting") != string::npos) {
                     float start_time = activities[job.id]["startTime"];
@@ -173,6 +172,8 @@ string get_url_path(URLParser::HTTP_URL & http_url) {
     return result;
 }
 
+// void build_resource_dependency_graph(map<string>)
+
 int main(int argc, char *argv[]) {
     std::cout << "Client started" << std::endl;
     string dep_fpath;
@@ -180,7 +181,7 @@ int main(int argc, char *argv[]) {
     if(argc > 1) {
         dep_fpath = string(argv[1]);
     } else {
-        dep_fpath = "web_browsing/dep_graphs/0_www.microsoft.com.json";
+        dep_fpath = "web_browsing/dep_graphs/0_www.glassdoor.com.json";
     }
     // printf("Dep file: %s\n", dep_fpath.c_str());
 
@@ -200,7 +201,8 @@ int main(int argc, char *argv[]) {
     json painting;
     json rendering;
     json netlog;
-    json critical_path;
+    // json critical_path;
+    set<string> critical_path;
     
     // Parse the logs
     for (json entry : loading_logs) {
@@ -229,7 +231,9 @@ int main(int argc, char *argv[]) {
                 }
             }
         } else if (entry.contains("criticalPath")) {
-            critical_path = entry["criticalPath"];
+            for (json cp : entry["criticalPath"]) {
+                critical_path.emplace(cp);
+            }
         }
     }
 
@@ -272,6 +276,105 @@ int main(int argc, char *argv[]) {
         dependency_degree_mp[a2] += 1;
     }
 
+    // Print the dependency list
+    printf("*** Dependency degree ***\n");
+    for (auto const& node : dependency_degree_mp) {
+        printf("%s : %d\n", node.first.c_str(), node.second);
+    }
+
+    // map<string, set<string>> dep_on_mp;
+    // // Build networking (download resource) dependency graph
+    // for (json node : dependency) {
+    //     string a1 = node["a1"];
+    //     string a2 = node["a2"];
+        
+    //     if (dep_on_mp.find(a2) == dep_on_mp.end()) {
+    //         set<string> temp;
+    //         dep_on_mp[a2] = temp;
+    //     }
+    //     dep_on_mp[a2].emplace(a1)
+
+        
+
+    //     // Remove all partial dependency
+    //     if (duration >= 0) {
+    //         duration = -1;
+    //     }
+        
+    //     // Add to dep graph
+    //     if (dependency_graph_mp.find(a1) == dependency_graph_mp.end()) {
+    //         vector<Activity> temp_v;
+    //         resource_dependency_graph_mp[a1] = temp_v;
+    //     } 
+    //     Activity temp;
+    //     temp.activity_id = a2;
+    //     temp.duration = duration;
+    //     dependency_graph_mp[a1].push_back(temp);
+        
+    //     // Increase the dep degree
+    //     if (dependency_degree_mp.find(a2) == dependency_degree_mp.end()) {
+    //         dependency_degree_mp[a2] = 0;
+    //     }
+    //     dependency_degree_mp[a2] += 1;
+    // }
+
+    // for (auto const& activity : activities) {
+    //     if (dependency_degree_mp.find(activity.first) == dependency_degree_mp.end()) {
+    //         string job_id = activity.first;
+    //         Job job = {activity.first, {}, 0};
+    //         jobQueue.emplace(job);
+    //     }
+    // }
+
+    // int step_id = 0;
+    // while (!jobQueue.empty()) {
+    //     Job job = jobQueue.front();
+    //     float total_duration = job.duration_spent;
+    //     vector<string> visited = job.visited;
+    //     jobQueue.pop();
+    //     // printf("%d: %s\n", step_id, job.id.c_str());
+    //     step_id++;
+    //     completed.emplace(job.id);
+    //     visited.push_back(job.id);
+        
+    //     float start_time = activities[job.id]["startTime"];
+    //     float end_time = activities[job.id]["endTime"];
+    //     float duration = end_time - start_time;
+    //     if (job.id.find("Networking") != string::npos) {
+    //         duration = 60;
+    //     }
+
+    //     total_duration += duration;
+
+    //     if (dependency_graph_mp.find(job.id) == dependency_graph_mp.end()) {
+    //         string nodes = "";
+    //         for (const string & node : visited) {
+    //             nodes = nodes + node + ",";
+    //         }
+    //         printf("DUR=%.2f - %s : %s\n", total_duration, job.id.c_str(), nodes.c_str());
+    //     }
+
+    //     // Reduce dep degree
+    //     for (auto const & node : dependency_graph_mp[job.id]) {
+    //         assert(dependency_degree_mp[node.activity_id] > 0);
+    //         dependency_degree_mp[node.activity_id] -= 1;
+    //         if (dependency_degree_mp[node.activity_id] == 0) {
+    //             Job temp = {node.activity_id, visited, total_duration};
+    //             jobQueue.emplace(temp);
+    //         }
+    //     }
+    // }
+
+    // critical_path = {"Networking_0", "Networking_50", "Networking_52"};
+
+    // printf("Networking critical path stat\n");
+    // for (const string & id : critical_path) {
+    //     int size_bytes = activities[id]["transferSize"];
+    //     // string mimeType = activities[id]["mimeType"];
+    //     // printf("%s size=%d, type=%s\n", id.c_str(), size_bytes, mimeType.c_str());
+    //     printf("%s size=%d, size=%d\n", id.c_str(), size_bytes);
+    // }
+
     // // Print activity list
     // printf("*** Activities ***\n");
     // for (auto const& activity : activities) {
@@ -288,36 +391,12 @@ int main(int argc, char *argv[]) {
     //     printf("}\n");
     // }
 
-    // // Print the dependency list
-    // printf("*** Dependency degree ***\n");
-    // for (auto const& node : dependency_degree_mp) {
-    //     printf("%s : %d\n", node.first.c_str(), node.second);
-    // }
-
     // printf("*** Browse ***\n");
     // // Populate the first job (activity with zero dependency degree)
     // for (auto const& activity : activities) {
     //     if (dependency_degree_mp.find(activity.first) == dependency_degree_mp.end()) {
     //         Job job = {activity.first};
     //         jobQueue.emplace(job);
-    //     }
-    // }
-
-    // int step_id = 0;
-    // while (!jobQueue.empty()) {
-    //     Job job = jobQueue.front();
-    //     jobQueue.pop();
-    //     printf("%d: %s\n", step_id, job.id.c_str());
-    //     step_id++;
-    //     completed.emplace(job.id);
-    //     // Reduce dep degree
-    //     for (auto const & node : dependency_graph_mp[job.id]) {
-    //         assert(dependency_degree_mp[node.activity_id] > 0);
-    //         dependency_degree_mp[node.activity_id] -= 1;
-    //         if (dependency_degree_mp[node.activity_id] == 0) {
-    //             Job temp = {node.activity_id};
-    //             jobQueue.emplace(temp);
-    //         }
     //     }
     // }
 
@@ -332,36 +411,31 @@ int main(int argc, char *argv[]) {
     //     }
     // }
 
-    printf("*** Start browsing ***\n");
-    // string input_url = "http://fastlane.rubiconproject.com/a/api/fastlane.json?account_id=11078&size_id=15&p_pos=atf&rp_floo";
-    // URLParser::HTTP_URL http_url = URLParser::Parse(input_url);
-    // cout << "HOST = " << http_url.host << endl;
-    // for (auto path : http_url.path)
-	// 	std::cout << "path:[" << path << "]" << std::endl;
+    // printf("*** Start browsing ***\n");
     
-    // Populate the first job (activity with zero dependency degree)
-    for (auto const& activity : activities) {
-        if (dependency_degree_mp.find(activity.first) == dependency_degree_mp.end()) {
-            Job job = {activity.first};
-            jobQueue.emplace(job);
-        }
-    }
+    // // Populate the first job (activity with zero dependency degree)
+    // for (auto const& activity : activities) {
+    //     if (dependency_degree_mp.find(activity.first) == dependency_degree_mp.end()) {
+    //         Job job = {activity.first};
+    //         jobQueue.emplace(job);
+    //     }
+    // }
     
-    int numThreads = 10;
-    auto now = chrono::steady_clock::now();
+    // int numThreads = 10;
+    // auto now = chrono::steady_clock::now();
 
-    // Create and start the thread pool
-    vector<thread> threadPool;
-    for (int i = 0; i < numThreads; ++i) {
-        threadPool.emplace_back(browser, i);
-    }
+    // // Create and start the thread pool
+    // vector<thread> threadPool;
+    // for (int i = 0; i < numThreads; ++i) {
+    //     threadPool.emplace_back(browser, i, critical_path);
+    // }
 
-    // Wait for all threads in the pool to finish
-    for (auto& thread : threadPool) {
-            thread.join();
-    }
+    // // Wait for all threads in the pool to finish
+    // for (auto& thread : threadPool) {
+    //         thread.join();
+    // }
 
 
-    float duration_ms = chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now() - now).count();
-    printf("All jobs processed, duration=%f ms\n", duration_ms);
+    // float duration_ms = chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now() - now).count();
+    // printf("All jobs processed, duration=%f ms\n", duration_ms);
 }

@@ -61,8 +61,12 @@ static const char* default_server_name = "::";
 static const char* ticket_store_filename = "demo_ticket_store.bin";
 static const char* token_store_filename = "demo_token_store.bin";
 
-#define ENABLE_PICOQUIC_MP_SCHEDULING 1
+#define PICOQUIC_MP_SCHEDULING_MODE 1
 #define ENABLE_PACKET_LOGGING 1
+#define PACKET_LOG_PATH "/home/william/picoquic-log/server-packet.txt"
+
+#define ENABLE_MSG_LOGGING 1
+#define MSG_LOG_PATH "/home/william/picoquic-log/msg-log-server.csv"
 
 #include "picoquic.h"
 #include "picoquic_packet_loop.h"
@@ -279,7 +283,7 @@ picohttp_server_path_item_t path_item_list[2] =
     }
 };
 
-int quic_server(const char* server_name, picoquic_quic_config_t * config, int just_once)
+int quic_server(const char* server_name, picoquic_quic_config_t * config, int just_once, int mp_scheduling_mode)
 {
     /* Start: start the QUIC process with cert and key files */
     int ret = 0;
@@ -351,14 +355,33 @@ int quic_server(const char* server_name, picoquic_quic_config_t * config, int ju
         }
     }
 
-    if (ENABLE_PICOQUIC_MP_SCHEDULING) {
-        picoquic_enable_mp_scheduling();
+    if (mp_scheduling_mode) {
+        picoquic_enable_mp_scheduling(mp_scheduling_mode);
+        qserver->llc_usage = 0;
+        qserver->llc_bandwidth_mbps = 2;
+        qserver->llc_owd = 2.5;
+        qserver->hb_owd = 30;
+        qserver->alpha = 0.75;
+        qserver->llc_last_adjust_time = current_time;
     }
 
     if (ENABLE_PACKET_LOGGING) {
-        char* log_path = "/home/william/picoquic-log/server-packet.txt";
-        picoquic_set_packet_log(log_path);
+        int ret = picoquic_set_packet_log(PACKET_LOG_PATH);
+        if (ret == -1) {
+            fprintf(stderr, "PACKET_LOG_PATH is not valid, skipping packet logging.\n");
+        }
     }
+
+    if (ENABLE_MSG_LOGGING) {
+        int ret = picoquic_set_msg_log(MSG_LOG_PATH);
+        msg_log_start_time = 0;
+        if (ret == -1) {
+            fprintf(stderr, "MSG_LOG_PATH is not valid, skipping msg logging.\n");
+        } else {
+            fprintf(msg_log_fp, "%s,%s,%s,%s\n", "arrival_time_s", "msg_size_byte", "connection_id", "msg_id");
+        }
+    }
+
 
     if (ret == 0) {
         /* Wait for packets */
@@ -388,12 +411,13 @@ int quic_server(const char* server_name, picoquic_quic_config_t * config, int ju
 /* TODO: rewrite using common code */
 void usage()
 {
-    fprintf(stderr, "PicoQUIC demo client and server\n");
+    fprintf(stderr, "**MODIFIED** PicoQUIC demo server\n");
     fprintf(stderr, "Usage: picoquicdemo <options> [server_name [port [scenario]]] \n");
     fprintf(stderr, "  For the client mode, specify server_name and port.\n");
     fprintf(stderr, "  For the server mode, use -p to specify the port.\n");
     picoquic_config_usage();
     fprintf(stderr, "Picoquic demo options:\n");
+    fprintf(stderr, "  -m MP scheduling mode\n");
     fprintf(stderr, "  -A \"ip/ifindex[,ip/ifindex]\"  IP and interface index for multipath alternative\n");
     fprintf(stderr, "                        path, e.g. \"10.0.0.2/3,10.0.0.3/4\". This option only\n");
     fprintf(stderr, "                        affects the behavior of the client.\n");
@@ -436,14 +460,15 @@ int main(int argc, char** argv)
     int just_once = 0;
     int is_client = 0;
     int ret;
+    int mp_scheduling_mode = 0;
 
 #ifdef _WINDOWS
     WSADATA wsaData = { 0 };
     (void)WSA_START(MAKEWORD(2, 2), &wsaData);
 #endif
     picoquic_config_init(&config);
-    memcpy(option_string, "A:u:f:1", 7);
-    ret = picoquic_config_option_letters(option_string + 7, sizeof(option_string) - 7, NULL);
+    memcpy(option_string, "A:u:f:E:1", 9);
+    ret = picoquic_config_option_letters(option_string + 9, sizeof(option_string) - 9, NULL);
 
     if (ret == 0) {
         /* Get the parameters */
@@ -469,6 +494,10 @@ int main(int argc, char** argv)
                 config.multipath_alt_config = malloc(sizeof(char) * (strlen(optarg) + 1));
                 memcpy(config.multipath_alt_config, optarg, sizeof(char) * (strlen(optarg) + 1));
                 printf("config.multipath_alt_config: %s\n", config.multipath_alt_config);
+                break;
+            case 'E':
+                mp_scheduling_mode = atoi(optarg);
+                printf("***MP scheduling mode is set to %d***\n", mp_scheduling_mode);
                 break;
             default:
                 if (picoquic_config_command_line(opt, &optind, argc, (char const **)argv, optarg, &config) != 0) {
@@ -522,7 +551,7 @@ int main(int argc, char** argv)
     
     printf("WWW dir = %s\n", config.www_dir);
 
-    ret = quic_server(server_name, &config, just_once);
+    ret = quic_server(server_name, &config, just_once, mp_scheduling_mode);
     printf("Server exit with code = %d\n", ret);
 
     picoquic_config_clear(&config);

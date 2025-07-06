@@ -24,6 +24,8 @@
 #include "tls_api.h"
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
+#include <math.h>
 
 #define MAX_CONNECTION 10
 
@@ -5183,7 +5185,7 @@ static int picoquic_select_next_path_mp(picoquic_cnx_t* cnx, uint64_t current_ti
 }
 
 static int picoquic_select_next_path_mp2(picoquic_cnx_t* cnx, uint64_t current_time, uint64_t* next_wake_time,
-    struct sockaddr_storage * p_addr_to, struct sockaddr_storage * p_addr_from, int* if_index, char * status[1024])
+    struct sockaddr_storage * p_addr_to, struct sockaddr_storage * p_addr_from, int* if_index, char * status[50000])
 {
     int path_id = -1;
     int highest_priority = -1;
@@ -5208,6 +5210,23 @@ static int picoquic_select_next_path_mp2(picoquic_cnx_t* cnx, uint64_t current_t
     int path_pacing_ready_status[MAX_CONNECTION] = { 0 };
     int path_cwin_ready_status[MAX_CONNECTION] = { 0 };
     // TODO: Add error handling if the number connection exceed the MAX_CONNECTION.    
+
+    int predicted_packet_size = 100;
+    // 1: ACK, 2: Data packet
+    int predicted_packet_type = 1;
+
+    char * stream_infos[2056];
+    memset(stream_infos, 0, 2056);
+    int stream_count = 0;
+    picoquic_stream_head_t * head_stream = next_stream;
+    while (head_stream != NULL) {
+        stream_count++;
+        char temp[32];
+        snprintf(temp, sizeof(temp), "%d-%d;", head_stream->stream_id, head_stream->current_total_length);
+        strcat(stream_infos, temp);
+        head_stream = head_stream->next_output_stream;
+    }
+
 
     cnx->last_path_polled++;
     if (cnx->last_path_polled > cnx->nb_paths) {
@@ -5352,89 +5371,555 @@ static int picoquic_select_next_path_mp2(picoquic_cnx_t* cnx, uint64_t current_t
         cnx->path[i_min_rtt]->is_nominal_ack_path = 1;
     }
 
+    /*** Adjust LLC usage ***/
+    float llc_bytes_per_ms = 0;
+    float elapsed_time_ms = 0;
+    if (mp_scheduling_mode > 0) {
+        llc_bytes_per_ms = (cnx->quic->llc_bandwidth_mbps * 1e6 / 8) / 1000;
+        /* Update global LLC usage */
+        elapsed_time_ms = (current_time - cnx->quic->llc_last_adjust_time) / 1e3;
+        cnx->quic->llc_usage = cnx->quic->llc_usage - (elapsed_time_ms * llc_bytes_per_ms);
+        if (cnx->quic->llc_usage < 0) {
+            cnx->quic->llc_usage = 0;
+        }
+        cnx->quic->llc_last_adjust_time = current_time;
+        /* Update per-conn LLC usage */
+        elapsed_time_ms = (current_time - cnx->llc_last_adjust_time) / 1e3;
+        cnx->curr_llc_usage = cnx->curr_llc_usage - (elapsed_time_ms * llc_bytes_per_ms);
+        if (cnx->curr_llc_usage < 0) {
+            cnx->curr_llc_usage = 0;
+        }
+        cnx->llc_last_adjust_time = current_time;
+    }
+
+    char * llc_status[256];
+    sprintf(llc_status, "[LLC usage=%.2f bytes, time_since_last_adjustment=%.2f, bytes_per_ms=%.2f]", cnx->quic->llc_usage, elapsed_time_ms, llc_bytes_per_ms);
+
+    char * stream_status[128];
+    if (next_stream == NULL) {
+        sprintf(stream_status, "[st_id=NULL]");
+    } else {
+        sprintf(stream_status, "[st_id=%d, sent_offset=%d, total_curr_length=%d, st_prio=%d, num_stream=%d]", next_stream->stream_id, next_stream->sent_offset, next_stream->current_total_length, next_stream->stream_priority, stream_count);
+    }
+
+    char * state_status[64];
+    char * path_readyness[8];
+    
+    char * path_status[256];
+    path_status[0] = '\0';
+    
+    char * other_status[256];
+    other_status[0] = '\0';
+
+    int both_path_ready;
+    if (cnx->nb_paths > 1 && cnx->path[1]->challenge_verified) {
+        both_path_ready = 1;
+        sprintf(path_readyness, "paths_ok");
+        sprintf(path_status, "[0:bytes_in_transit=%d, cwin=%d, cwin_ok=%d, rtt=%d, bw=%d -- 1:bytes_in_transit=%d, cwin=%d, cwin_ok=%d, rtt=%d, bw=%d]", 
+            cnx->path[0]->bytes_in_transit, cnx->path[0]->cwin, path_cwin_ready_status[0], cnx->path[0]->rtt_min, cnx->path[0]->bandwidth_estimate,
+            cnx->path[1]->bytes_in_transit, cnx->path[1]->cwin, path_cwin_ready_status[1], cnx->path[1]->rtt_min, cnx->path[1]->bandwidth_estimate);
+    } else {
+        both_path_ready = 0;
+        sprintf(path_readyness, "paths_no");
+    }
+
+
+    /** Path selection logic **/
     if (challenge_path >= 0) {
         path_id = challenge_path;
-        strcpy(status, "challenge_path");
-    } else if (is_ack_needed) {
-        if (cnx->nb_paths > 1 && cnx->path[1]->challenge_verified) {
-            if (next_stream != NULL) {
-                // if (next_stream->current_total_length > 3000) {
-                //     path_id = 0;
-                // } else {
-                //     path_id = 1;
-                // }
-                path_id = 1;
-                sprintf(status, "forced ack_path [st_id=%d, sent_offset=%d, send_queue_length=NULL, curr_length=%d, st_prio=%d]", next_stream->stream_id, next_stream->sent_offset, next_stream->current_total_length, next_stream->stream_priority);                
-                // path_id = 1;
-                // sprintf(status, "forced ack_path [st_id=%d, sent_offset=%d, total_length=%d, st_prio=%d]", next_stream->stream_id, next_stream->sent_offset, next_stream->current_total_length, next_stream->stream_priority);
-            } else {
-                path_id = 1;
-                sprintf(status, "forced ack_path [st_id=NULL]");
-            }
-        } else if (is_min_rtt_pacing_ok) {
-            path_id = i_min_rtt;
-            // if (cnx->nb_paths > 1) {
-            //     printf("challenge=%d,", cnx->path[1]->challenge_verified);
-            // }
-            strcpy(status, "min_rtt ack needed");
-        } else {    
-            path_id = 0; 
-            sprintf(status, "default ack_path [st_id=NULL]");
-        }
-    } else if (data_path_cwin >= 0) { 
-        /* if there is a path ready to send the most urgent data, select it */
-        if (affinity_path_id >= 0) {
-            path_id = affinity_path_id;
-            strcpy(status, "affinity_path");
-        }
-        else {
-            path_id = data_path_cwin;
-            // Path selection logic
-            // if (next_stream != NULL) {
-            //     int total_bytes_in_stream = next_stream->send_queue->length;
-            //     int sent_bytes = next_stream->sent_offset;
-            //     float llc_max_size = (2 * 1e6 / 8) / 1000 * 2.5;
-            //     if (total_bytes_in_stream < llc_max_size) {
-            //         path_id = 1;
-            //     } else {
-            //         path_id = 0;
-            //     }
-            // }
-            if (cnx->nb_paths > 1 && cnx->path[1]->challenge_verified) {
-                if (next_stream != NULL) {
-                    if (next_stream->current_total_length > 1000) {
-                        path_id = 0;
-                    } else {
-                        path_id = 1;
-                    }
-                    sprintf(status, "forced data_path_cwin [st_id=%d, sent_offset=%d, total_length=%d, st_prio=%d][1:bytes_in_transit=%d, cwin=%d 2:bytes_in_transit=%d, cwin=%d][cwin_ok:0=%d, 1=%d]", next_stream->stream_id, next_stream->sent_offset, next_stream->current_total_length, next_stream->stream_priority,
-                        cnx->path[0]->bytes_in_transit, cnx->path[0]->cwin, cnx->path[1]->bytes_in_transit, cnx->path[1]->cwin, path_cwin_ready_status[0], path_cwin_ready_status[1]);
-                } else {
-                    path_id = data_path_cwin;
-                    sprintf(status, "forced data_path_cwin [st_id=NULL][1:bytes_in_transit=%d, cwin=%d 2:bytes_in_transit=%d, cwin=%d][cwin_ok:0=%d, 1=%d]", cnx->path[0]->bytes_in_transit, cnx->path[0]->cwin, cnx->path[1]->bytes_in_transit, cnx->path[1]->cwin, path_cwin_ready_status[0], path_cwin_ready_status[1]);
-                }
-            } else {
-                sprintf(status, "default data_path_cwin [path_id=%d][cwin_ok:0=%d, 1=%d]", path_id, path_cwin_ready_status[0], path_cwin_ready_status[1]);
-            }
-            //printf("%d-path %d is selected-cwin=%d-bytes_in_transit=%d\n", current_time, path_id, cnx->path[path_id]->cwin, cnx->path[path_id]->bytes_in_transit);
-        }
+        sprintf(state_status, "CHALLENGE");
     }
-    else if (data_path_pacing >= 0) {
-        path_id = data_path_pacing;
-        if (cnx->nb_paths > 1 && cnx->path[1]->challenge_verified) {
-            if (next_stream != NULL) {
-                if (next_stream->current_total_length > 3000) {
-                    path_id = 0;
-                } else {
+    else if (is_ack_needed) {
+        sprintf(state_status, "ACK_NEEDED");
+        if (both_path_ready) {
+            predicted_packet_type = 1;
+            predicted_packet_size = 100;
+            if (mp_scheduling_mode == 1) {
+                path_id = 1;
+            } else if (mp_scheduling_mode >= 2) {
+                float current_llc_usage = cnx->quic->llc_usage;
+                float llc_bytes_per_ms = (cnx->quic->llc_bandwidth_mbps * 1e6 / 8) / 1000;   
+                float alpha = cnx->quic->alpha;
+                float llc_completion_time = (current_llc_usage + predicted_packet_size) / llc_bytes_per_ms + cnx->quic->llc_owd;
+                float hbc_completion_time = cnx->quic->hb_owd;
+                float cost = (predicted_packet_size + current_llc_usage) / llc_bytes_per_ms;
+                float rewards = llc_completion_time - hbc_completion_time;
+                float threshold = (llc_bytes_per_ms / (alpha + 1) * (cnx->quic->hb_owd - cnx->quic->llc_owd)) - current_llc_usage;
+                sprintf(other_status, "[threshold=%.2f]", threshold);
+                if (predicted_packet_size <= threshold) {
                     path_id = 1;
+                } else {
+                    path_id = 0;
                 }
-                sprintf(status, "forced data_path_pacing [st_id=%d, sent_offset=%d, total_length=%d, st_prio=%d]", next_stream->stream_id, next_stream->sent_offset, next_stream->current_total_length, next_stream->stream_priority);
-            } else {
-                path_id = data_path_pacing;
-                sprintf(status, "forced data_path_pacing [st_id=NULL]");
             }
         } else {
-            sprintf(status, "default data_path_pacing [path_id=%d]", path_id);
+            path_id = i_min_rtt;
+        }
+    }
+    else if (data_path_cwin >= 0) { // At least one path is cwin-ready
+        sprintf(state_status, "DATA_PATH_CWIN");
+        if (both_path_ready) {
+            /**************** Packet-based steering *******************/
+            if (mp_scheduling_mode == 1) {
+                /* All data packet to HBC */
+                path_id = 0;
+            } else if (mp_scheduling_mode == 2) {
+                /* DChannel packet steering without boundaries knowledge and WITHOUT packet reordering delay taken into account */
+                if (next_stream != NULL) {
+                    if (next_stream->sent_offset <= 0) {
+                        // Somehow the first offset will be a small packet
+                        predicted_packet_size = 50;
+                        predicted_packet_type = 2;
+                    } else {
+                        predicted_packet_size = next_stream->current_total_length - next_stream->sent_offset;
+                        if (predicted_packet_size > 1300) {
+                            // Keep it to be the MTU-sized
+                            predicted_packet_size = 1300;
+                            predicted_packet_type = 2;
+                        }
+                    }
+                    // Make the decision
+                    float current_llc_usage = cnx->quic->llc_usage;
+                    float llc_bytes_per_ms = (cnx->quic->llc_bandwidth_mbps * 1e6 / 8) / 1000;   
+                    float alpha = cnx->quic->alpha;
+                    float llc_completion_time = (current_llc_usage + predicted_packet_size) / llc_bytes_per_ms + cnx->quic->llc_owd;
+                    float hbc_completion_time = cnx->quic->hb_owd;
+                    float cost = (predicted_packet_size + current_llc_usage) / llc_bytes_per_ms;
+                    float rewards = llc_completion_time - hbc_completion_time;
+                    float threshold = (llc_bytes_per_ms / (alpha + 1) * (cnx->quic->hb_owd - cnx->quic->llc_owd)) - current_llc_usage;
+                    sprintf(other_status, "[rewards=%.2f, cost=%.2f, a=%.2f]", rewards, cost, cnx->quic->alpha);
+                    if (rewards > cnx->quic->alpha * cost) {
+                        path_id = 1;
+                    } else {
+                        path_id = 0;
+                    }   
+                } else {
+                    path_id = data_path_cwin;
+                }
+            } else if (mp_scheduling_mode == 3) {
+                /* DChannel packet steering without boundaries knowledge, but took into account of the LLC packet reordering delay */
+                /* This is WITH global knowledge of the LLC usage */
+                if (next_stream != NULL) {
+                    if (next_stream->sent_offset <= 0) {
+                        // Somehow the first offset will be a small packet
+                        predicted_packet_size = 50;
+                        predicted_packet_type = 2;
+                    } else {
+                        predicted_packet_size = next_stream->current_total_length - next_stream->sent_offset;
+                        if (predicted_packet_size > 1300) {
+                            // Keep it to be the MTU-sized
+                            predicted_packet_size = 1300;
+                            predicted_packet_type = 2;
+                        }
+                    }
+                    // Make the decision
+                    float current_llc_usage = cnx->quic->llc_usage;
+                    float llc_bytes_per_ms = (cnx->quic->llc_bandwidth_mbps * 1e6 / 8) / 1000;   
+                    float alpha = cnx->quic->alpha;
+                    float llc_completion_time = (current_llc_usage + predicted_packet_size) / llc_bytes_per_ms + cnx->quic->llc_owd;
+                    if (cnx->predicted_last_packet_arrival_time > llc_completion_time) {
+                        // Account for the delay due to the packet reordering from the LLC path
+                        llc_completion_time = cnx->predicted_last_packet_arrival_time;
+                    }
+                    float hbc_completion_time = cnx->quic->hb_owd;
+                    float cost = (predicted_packet_size + current_llc_usage) / llc_bytes_per_ms;
+                    float rewards = hbc_completion_time - llc_completion_time;
+                    sprintf(other_status, "[R=%.2f, C=%.2f, a=%.2f]", rewards, cost, cnx->quic->alpha);
+                    if (rewards > cnx->quic->alpha * cost) {
+                        path_id = 1;
+                        if (llc_completion_time > cnx->predicted_last_packet_arrival_time) {
+                            cnx->predicted_last_packet_arrival_time = llc_completion_time;
+                        }
+                    } else {
+                        path_id = 0;
+                        if (hbc_completion_time > cnx->predicted_last_packet_arrival_time) {
+                            cnx->predicted_last_packet_arrival_time = hbc_completion_time;
+                        }
+                    }   
+                } else {
+                    path_id = data_path_cwin;
+                }
+            } else if (mp_scheduling_mode == 4) {
+                /* DChannel packet steering without boundaries knowledge, but took into account of the LLC packet reordering delay */
+                /* This is WITHOUT global knowledge of the LLC usage, such that each connection keep track of their own LLC usage */
+                if (next_stream != NULL) {
+                    if (next_stream->sent_offset <= 0) {
+                        // Somehow the first offset will be a small packet
+                        predicted_packet_size = 50;
+                        predicted_packet_type = 2;
+                    } else {
+                        predicted_packet_size = next_stream->current_total_length - next_stream->sent_offset;
+                        if (predicted_packet_size > 1300) {
+                            // Keep it to be the MTU-sized
+                            predicted_packet_size = 1300;
+                            predicted_packet_type = 2;
+                        }
+                    }
+                    // Make the decision
+                    float current_llc_usage = cnx->curr_llc_usage;
+                    float llc_bytes_per_ms = (cnx->quic->llc_bandwidth_mbps * 1e6 / 8) / 1000;   
+                    float alpha = cnx->quic->alpha;
+                    float llc_completion_time = (current_llc_usage + predicted_packet_size) / llc_bytes_per_ms + cnx->quic->llc_owd;
+                    if (cnx->predicted_last_packet_arrival_time > llc_completion_time) {
+                        // Account for the delay due to the packet reordering from the LLC path
+                        llc_completion_time = cnx->predicted_last_packet_arrival_time;
+                    }
+                    float hbc_completion_time = cnx->quic->hb_owd;
+                    float cost = (predicted_packet_size + current_llc_usage) / llc_bytes_per_ms;
+                    float rewards = hbc_completion_time - llc_completion_time;
+                    sprintf(other_status, "[rewards=%.2f, cost=%.2f, a=%.2f]", rewards, cost, cnx->quic->alpha);
+                    if (rewards > cnx->quic->alpha * cost) {
+                        path_id = 1;
+                        if (llc_completion_time > cnx->predicted_last_packet_arrival_time) {
+                            cnx->predicted_last_packet_arrival_time = llc_completion_time;
+                        }
+                    } else {
+                        path_id = 0;
+                        if (hbc_completion_time > cnx->predicted_last_packet_arrival_time) {
+                            cnx->predicted_last_packet_arrival_time = hbc_completion_time;
+                        }
+                    }   
+                } else {
+                    path_id = data_path_cwin;
+                }
+            /******************* Message based steering ************************/
+            } else if (mp_scheduling_mode == 10) {
+                /* DChannel message steering WITH global LLC usage knowledge */
+                if (next_stream != NULL) {
+                    if (next_stream->sent_offset <= 0 || next_stream->path_affinity < 0) {
+                        float current_llc_usage = cnx->quic->llc_usage;
+                        float llc_bytes_per_ms = (cnx->quic->llc_bandwidth_mbps * 1e6 / 8) / 1000;   
+                        assert(llc_bytes_per_ms > 0);
+                        float alpha = cnx->quic->alpha;
+                        float llc_completion_time = (current_llc_usage + next_stream->current_total_length) / llc_bytes_per_ms + cnx->quic->llc_owd;
+                        float hbc_completion_time = cnx->quic->hb_owd;
+                        float cost = (next_stream->current_total_length + current_llc_usage) / llc_bytes_per_ms;
+                        float rewards = llc_completion_time - hbc_completion_time;
+                        float threshold = (llc_bytes_per_ms / (alpha + 1) * (cnx->quic->hb_owd - cnx->quic->llc_owd)) - current_llc_usage;
+                        sprintf(other_status, "[threshold=%.2f]", threshold);
+                        if (next_stream->current_total_length <= threshold) {
+                            next_stream->path_affinity = 1;                
+                        } else {
+                            next_stream->path_affinity = 0;
+                        }
+                    }
+                    path_id = next_stream->path_affinity;
+                    if (!path_cwin_ready_status[path_id]) {
+                        sprintf(other_status, "%s CWIN_NOT_AVAILABLE!!", other_status);
+                    }
+                } else {
+                    path_id = data_path_cwin;
+                }
+            } else if (mp_scheduling_mode == 11) {
+                /* DChannel message steering WITH global LLC usage knowledge */
+                if (next_stream != NULL) {
+                    if (next_stream->sent_offset <= 0 || next_stream->path_affinity < 0) {
+                        float current_llc_usage = cnx->curr_llc_usage;
+                        float llc_bytes_per_ms = (cnx->quic->llc_bandwidth_mbps * 1e6 / 8) / 1000;   
+                        assert(llc_bytes_per_ms > 0);
+                        float alpha = cnx->quic->alpha;
+                        float llc_completion_time = (current_llc_usage + next_stream->current_total_length) / llc_bytes_per_ms + cnx->quic->llc_owd;
+                        float hbc_completion_time = cnx->quic->hb_owd;
+                        float cost = (next_stream->current_total_length + current_llc_usage) / llc_bytes_per_ms;
+                        float rewards = llc_completion_time - hbc_completion_time;
+                        float threshold = (llc_bytes_per_ms / (alpha + 1) * (cnx->quic->hb_owd - cnx->quic->llc_owd)) - current_llc_usage;
+                        sprintf(other_status, "[threshold=%.2f]", threshold);
+                        if (next_stream->current_total_length <= threshold) {
+                            next_stream->path_affinity = 1;                
+                        } else {
+                            next_stream->path_affinity = 0;
+                        }
+                    }
+                    path_id = next_stream->path_affinity;
+                    if (!path_cwin_ready_status[path_id]) {
+                        sprintf(other_status, "%s CWIN_NOT_AVAILABLE!!", other_status);
+                    }
+                } else {
+                    path_id = data_path_cwin;
+                }
+            } else if (mp_scheduling_mode == 20) {
+                /* Message steering WITH local LLC usage knowledge + Priority */
+                if (next_stream != NULL) {
+                    if (next_stream->sent_offset <= 0 || next_stream->path_affinity < 0) {
+                        float current_llc_usage = cnx->curr_llc_usage;
+                        float llc_bytes_per_ms = (cnx->quic->llc_bandwidth_mbps * 1e6 / 8) / 1000;   
+                        assert(llc_bytes_per_ms > 0);
+                        float alpha = cnx->quic->alpha;
+
+                        int priority = next_stream->stream_priority;
+                        if (priority == 1) {
+                            alpha = 0.1;
+                        } else if (priority == 2) {
+                            alpha = 0.75;
+                        } else {
+                            alpha = 10;
+                        }
+                        // printf("STREAM prio = %d\n", priority);
+                        
+                        float llc_completion_time = (current_llc_usage + next_stream->current_total_length) / llc_bytes_per_ms + cnx->quic->llc_owd;
+                        float hbc_completion_time = cnx->quic->hb_owd;
+                        float cost = (next_stream->current_total_length + current_llc_usage) / llc_bytes_per_ms;
+                        float rewards = llc_completion_time - hbc_completion_time;
+                        float threshold = (llc_bytes_per_ms / (alpha + 1) * (cnx->quic->hb_owd - cnx->quic->llc_owd)) - current_llc_usage;
+                        sprintf(other_status, "[threshold=%.2f]", threshold);
+                        if (next_stream->current_total_length <= threshold) {
+                            next_stream->path_affinity = 1;                
+                        } else {
+                            next_stream->path_affinity = 0;
+                        }
+                    }
+                    path_id = next_stream->path_affinity;
+                    if (!path_cwin_ready_status[path_id]) {
+                        sprintf(other_status, "%s CWIN_NOT_AVAILABLE!!", other_status);
+                    }
+                } else {
+                    path_id = data_path_cwin;
+                }
+            /************* Default MP scheduling ********************/
+            } else {
+                /* if there is a path ready to send the most urgent data, select it */
+                if (affinity_path_id >= 0) {
+                    path_id = affinity_path_id;
+                }
+                else {
+                    path_id = data_path_cwin;
+                }
+            }
+        } else {
+            /* if there is a path ready to send the most urgent data, select it */
+            if (affinity_path_id >= 0) {
+                path_id = affinity_path_id;
+            }
+            else {
+                path_id = data_path_cwin;
+            }
+        }
+    } else if (data_path_pacing >= 0) { // At least one path is pacing-ready
+        sprintf(state_status, "DATA_PATH_PACING");
+        if (both_path_ready) {
+            /**************** Packet-based steering *******************/
+            if (mp_scheduling_mode == 1) {
+                if (next_stream != NULL) {
+                    /* All data packet to HBC */
+                    path_id = 0;
+                }
+            } else if (mp_scheduling_mode == 2) {
+                /* DChannel packet steering without boundaries knowledge and WITHOUT packet reordering delay taken into account */
+                if (next_stream != NULL) {
+                    if (next_stream->sent_offset <= 0) {
+                        // Somehow the first offset will be a small packet
+                        predicted_packet_size = 50;
+                        predicted_packet_type = 2;
+                    } else {
+                        predicted_packet_size = next_stream->current_total_length - next_stream->sent_offset;
+                        if (predicted_packet_size > 1300) {
+                            // Keep it to be the MTU-sized
+                            predicted_packet_size = 1300;
+                            predicted_packet_type = 2;
+                        }
+                    }
+                    // Make the decision
+                    float current_llc_usage = cnx->quic->llc_usage;
+                    float llc_bytes_per_ms = (cnx->quic->llc_bandwidth_mbps * 1e6 / 8) / 1000;   
+                    float alpha = cnx->quic->alpha;
+                    float llc_completion_time = (current_llc_usage + predicted_packet_size) / llc_bytes_per_ms + cnx->quic->llc_owd;
+                    float hbc_completion_time = cnx->quic->hb_owd;
+                    float cost = (predicted_packet_size + current_llc_usage) / llc_bytes_per_ms;
+                    float rewards = llc_completion_time - hbc_completion_time;
+                    float threshold = (llc_bytes_per_ms / (alpha + 1) * (cnx->quic->hb_owd - cnx->quic->llc_owd)) - current_llc_usage;
+                    sprintf(other_status, "[rewards=%.2f, cost=%.2f, a=%.2f]", rewards, cost, cnx->quic->alpha);
+                    if (rewards > cnx->quic->alpha * cost) {
+                        path_id = 1;
+                    } else {
+                        path_id = 0;
+                    }     
+                } else {
+                    path_id = data_path_pacing;
+                }
+            } else if (mp_scheduling_mode == 3) {
+                /* DChannel packet steering without boundaries knowledge, but took into account of the LLC packet reordering delay */
+                /* This is WITH global knowledge of the LLC usage */
+                if (next_stream != NULL) {
+                    if (next_stream->sent_offset <= 0) {
+                        // Somehow the first offset will be a small packet
+                        predicted_packet_size = 50;
+                        predicted_packet_type = 2;
+                    } else {
+                        predicted_packet_size = next_stream->current_total_length - next_stream->sent_offset;
+                        if (predicted_packet_size > 1300) {
+                            // Keep it to be the MTU-sized
+                            predicted_packet_size = 1300;
+                            predicted_packet_type = 2;
+                        }
+                    }
+                    // Make the decision
+                    float current_llc_usage = cnx->quic->llc_usage;
+                    float llc_bytes_per_ms = (cnx->quic->llc_bandwidth_mbps * 1e6 / 8) / 1000;   
+                    float alpha = cnx->quic->alpha;
+                    float llc_completion_time = (current_llc_usage + predicted_packet_size) / llc_bytes_per_ms + cnx->quic->llc_owd;
+                    if (cnx->predicted_last_packet_arrival_time > llc_completion_time) {
+                        // Account for the delay due to the packet reordering from the LLC path
+                        llc_completion_time = cnx->predicted_last_packet_arrival_time;
+                    }
+                    float hbc_completion_time = cnx->quic->hb_owd;
+                    float cost = (predicted_packet_size + current_llc_usage) / llc_bytes_per_ms;
+                    float rewards = hbc_completion_time - llc_completion_time;
+                    sprintf(other_status, "[rewards=%.2f, cost=%.2f, a=%.2f]", rewards, cost, cnx->quic->alpha);
+                    if (rewards > cnx->quic->alpha * cost) {
+                        path_id = 1;
+                        if (llc_completion_time > cnx->predicted_last_packet_arrival_time) {
+                            cnx->predicted_last_packet_arrival_time = llc_completion_time;
+                        }
+                    } else {
+                        path_id = 0;
+                        if (hbc_completion_time > cnx->predicted_last_packet_arrival_time) {
+                            cnx->predicted_last_packet_arrival_time = hbc_completion_time;
+                        }
+                    }   
+                } else {
+                    path_id = data_path_pacing;
+                }
+            } else if (mp_scheduling_mode == 4) {
+                /* DChannel packet steering without boundaries knowledge, but took into account of the LLC packet reordering delay */
+                /* This is WITHOUT global knowledge of the LLC usage, such that each connection keep track of their own LLC usage */
+                if (next_stream != NULL) {
+                    if (next_stream->sent_offset <= 0) {
+                        // Somehow the first offset will be a small packet
+                        predicted_packet_size = 50;
+                        predicted_packet_type = 2;
+                    } else {
+                        predicted_packet_size = next_stream->current_total_length - next_stream->sent_offset;
+                        if (predicted_packet_size > 1300) {
+                            // Keep it to be the MTU-sized
+                            predicted_packet_size = 1300;
+                            predicted_packet_type = 2;
+                        }
+                    }
+                    // Make the decision
+                    float current_llc_usage = cnx->curr_llc_usage;
+                    float llc_bytes_per_ms = (cnx->quic->llc_bandwidth_mbps * 1e6 / 8) / 1000;   
+                    float alpha = cnx->quic->alpha;
+                    float llc_completion_time = (current_llc_usage + predicted_packet_size) / llc_bytes_per_ms + cnx->quic->llc_owd;
+                    if (cnx->predicted_last_packet_arrival_time > llc_completion_time) {
+                        // Account for the delay due to the packet reordering from the LLC path
+                        llc_completion_time = cnx->predicted_last_packet_arrival_time;
+                    }
+                    float hbc_completion_time = cnx->quic->hb_owd;
+                    float cost = (predicted_packet_size + current_llc_usage) / llc_bytes_per_ms;
+                    float rewards = hbc_completion_time - llc_completion_time;
+                    sprintf(other_status, "[rewards=%.2f, cost=%.2f, a=%.2f]", rewards, cost, cnx->quic->alpha);
+                    if (rewards > cnx->quic->alpha * cost) {
+                        path_id = 1;
+                        if (llc_completion_time > cnx->predicted_last_packet_arrival_time) {
+                            cnx->predicted_last_packet_arrival_time = llc_completion_time;
+                        }
+                    } else {
+                        path_id = 0;
+                        if (hbc_completion_time > cnx->predicted_last_packet_arrival_time) {
+                            cnx->predicted_last_packet_arrival_time = hbc_completion_time;
+                        }
+                    }   
+                } else {
+                    path_id = data_path_pacing;
+                }
+            /******************* Message based steering ************************/
+            } else if (mp_scheduling_mode == 10) {
+                /* DChannel message steering WITH global LLC usage knowledge */
+                if (next_stream != NULL) {
+                    if (next_stream->sent_offset <= 0 || next_stream->path_affinity < 0) {
+                        float current_llc_usage = cnx->quic->llc_usage;
+                        float llc_bytes_per_ms = (cnx->quic->llc_bandwidth_mbps * 1e6 / 8) / 1000;   
+                        assert(llc_bytes_per_ms > 0);
+                        float alpha = cnx->quic->alpha;
+                        float llc_completion_time = (current_llc_usage + next_stream->current_total_length) / llc_bytes_per_ms + cnx->quic->llc_owd;
+                        float hbc_completion_time = cnx->quic->hb_owd;
+                        float cost = (next_stream->current_total_length + current_llc_usage) / llc_bytes_per_ms;
+                        float rewards = llc_completion_time - hbc_completion_time;
+                        float threshold = (llc_bytes_per_ms / (alpha + 1) * (cnx->quic->hb_owd - cnx->quic->llc_owd)) - current_llc_usage;
+                        sprintf(other_status, "[threshold=%.2f]", threshold);
+                        if (next_stream->current_total_length <= threshold) {
+                            next_stream->path_affinity = 1;                
+                        } else {
+                            next_stream->path_affinity = 0;
+                        }
+                    }
+                    path_id = next_stream->path_affinity;
+                    if (!path_cwin_ready_status[path_id]) {
+                        sprintf(other_status, "%s CWIN_NOT_AVAILABLE!!", other_status);
+                    }
+                } else {
+                    path_id = data_path_pacing;
+                }
+            } else if (mp_scheduling_mode == 11) {
+                /* DChannel message steering WITHOUT global LLC usage knowledge */
+                if (next_stream != NULL) {
+                    if (next_stream->sent_offset <= 0 || next_stream->path_affinity < 0) {
+                        float current_llc_usage = cnx->curr_llc_usage;
+                        float llc_bytes_per_ms = (cnx->quic->llc_bandwidth_mbps * 1e6 / 8) / 1000;   
+                        assert(llc_bytes_per_ms > 0);
+                        float alpha = cnx->quic->alpha;
+                        float llc_completion_time = (current_llc_usage + next_stream->current_total_length) / llc_bytes_per_ms + cnx->quic->llc_owd;
+                        float hbc_completion_time = cnx->quic->hb_owd;
+                        float cost = (next_stream->current_total_length + current_llc_usage) / llc_bytes_per_ms;
+                        float rewards = llc_completion_time - hbc_completion_time;
+                        float threshold = (llc_bytes_per_ms / (alpha + 1) * (cnx->quic->hb_owd - cnx->quic->llc_owd)) - current_llc_usage;
+                        sprintf(other_status, "[threshold=%.2f]", threshold);
+                        if (next_stream->current_total_length <= threshold) {
+                            next_stream->path_affinity = 1;                
+                        } else {
+                            next_stream->path_affinity = 0;
+                        }
+                    }
+                    path_id = next_stream->path_affinity;
+                    if (!path_cwin_ready_status[path_id]) {
+                        sprintf(other_status, "%s CWIN_NOT_AVAILABLE!!", other_status);
+                    }
+                } else {
+                    path_id = data_path_pacing;
+                }
+            } else if (mp_scheduling_mode == 11) {
+                /* DChannel message steering WITHOUT global LLC usage knowledge */
+                if (next_stream != NULL) {
+                    if (next_stream->sent_offset <= 0 || next_stream->path_affinity < 0) {
+                        float current_llc_usage = cnx->curr_llc_usage;
+                        float llc_bytes_per_ms = (cnx->quic->llc_bandwidth_mbps * 1e6 / 8) / 1000;   
+                        assert(llc_bytes_per_ms > 0);
+                        float alpha = cnx->quic->alpha;
+                        
+                        int priority = next_stream->stream_priority;
+                        if (priority == 1) {
+                            alpha = 0.1;
+                        } else if (priority == 2) {
+                            alpha = 0.75;
+                        } else {
+                            alpha = 10;
+                        }
+                        // printf("STREAM prio = %d\n", priority);
+
+                        float llc_completion_time = (current_llc_usage + next_stream->current_total_length) / llc_bytes_per_ms + cnx->quic->llc_owd;
+                        float hbc_completion_time = cnx->quic->hb_owd;
+                        float cost = (next_stream->current_total_length + current_llc_usage) / llc_bytes_per_ms;
+                        float rewards = llc_completion_time - hbc_completion_time;
+                        float threshold = (llc_bytes_per_ms / (alpha + 1) * (cnx->quic->hb_owd - cnx->quic->llc_owd)) - current_llc_usage;
+                        sprintf(other_status, "[threshold=%.2f]", threshold);
+                        if (next_stream->current_total_length <= threshold) {
+                            next_stream->path_affinity = 1;                
+                        } else {
+                            next_stream->path_affinity = 0;
+                        }
+                    }
+                    path_id = next_stream->path_affinity;
+                    if (!path_cwin_ready_status[path_id]) {
+                        sprintf(other_status, "%s CWIN_NOT_AVAILABLE!!", other_status);
+                    }
+                } else {
+                    path_id = data_path_pacing;
+                }
+            } else {
+                path_id = data_path_pacing; 
+            }
+        } else {
+            path_id = data_path_pacing;
         }
     }
     else {
@@ -5447,7 +5932,6 @@ static int picoquic_select_next_path_mp2(picoquic_cnx_t* cnx, uint64_t current_t
             SET_LAST_WAKE(cnx->quic, PICOQUIC_SENDER);
         }
         path_id = 0;
-        sprintf(status, "default_to_zero");
     }
     if (cnx->path[path_id]->path_is_standby && challenge_path != path_id) {
         /* Set the selected path to available if it was standby. Selecting a standby
@@ -5458,6 +5942,7 @@ static int picoquic_select_next_path_mp2(picoquic_cnx_t* cnx, uint64_t current_t
     cnx->path[path_id]->selected++;
     picoquic_set_path_addresses(cnx, path_id, is_nat, p_addr_to, p_addr_from, if_index);
 
+    sprintf(status, "%s %s %s %s [%s] %s %s", path_readyness, state_status, path_status, stream_status, stream_infos, llc_status, other_status);
     return path_id;
 }
 
@@ -5528,7 +6013,7 @@ static int picoquic_select_next_path(picoquic_cnx_t * cnx, uint64_t current_time
 }
 
 static int picoquic_select_next_path2(picoquic_cnx_t * cnx, uint64_t current_time, uint64_t * next_wake_time,
-    struct sockaddr_storage * p_addr_to, struct sockaddr_storage * p_addr_from, int* if_index, char * status[1024])
+    struct sockaddr_storage * p_addr_to, struct sockaddr_storage * p_addr_from, int* if_index, char * status[50000])
 {
     int path_id = -1;
 
@@ -5598,7 +6083,7 @@ int picoquic_prepare_packet_ex(picoquic_cnx_t* cnx,
     uint64_t current_time, uint8_t* send_buffer, size_t send_buffer_max, size_t* send_length,
     struct sockaddr_storage * p_addr_to, struct sockaddr_storage * p_addr_from, int* if_index, size_t* send_msg_size)
 {
-
+    // printf("")
     int ret;
     picoquic_packet_t * packet = NULL;
     uint64_t initial_next_time;
@@ -5631,11 +6116,14 @@ int picoquic_prepare_packet_ex(picoquic_cnx_t* cnx,
             picoquic_delete_abandoned_paths(cnx, current_time, &next_wake_time);
         }
 
-        char status[1024];
-        memset(status, 0, 1024);
+        char status[50000];
+        memset(status, 0, 50000);
+
+        char prepare_segment_status[10000];
+        memset(prepare_segment_status, 0 , 10000);
 
         /* Select the next path, and the corresponding addresses */
-        if (is_mp_scheduling_active) {
+        if (mp_scheduling_mode) {
             path_id = picoquic_select_next_path2(cnx, current_time, &next_wake_time, p_addr_to, p_addr_from, if_index, &status);
         } else {
             path_id = picoquic_select_next_path(cnx, current_time, &next_wake_time, p_addr_to, p_addr_from, if_index);
@@ -5695,25 +6183,13 @@ int picoquic_prepare_packet_ex(picoquic_cnx_t* cnx,
                     break;
                 }
                 else {
-                    char prepare_segment_status[10000];
-                    memset(prepare_segment_status, 0 , 10000);
-                    if (is_mp_scheduling_active) {
+                    if (mp_scheduling_mode) {
                         ret = picoquic_prepare_segment2(cnx, cnx->path[path_id], packet, current_time,
                             packet_buffer + packet_size, available, &segment_length, &next_wake_time, &is_initial_sent, &prepare_segment_status);
                     } else {
                         ret = picoquic_prepare_segment(cnx, cnx->path[path_id], packet, current_time,
                             packet_buffer + packet_size, available, &segment_length, &next_wake_time, &is_initial_sent);
                     }
-                    
-                    if (packet_log != NULL) {
-                        if (packet->length > 0) {
-                            char text[256];
-                            picoquic_cnx_id_to_string(text, cnx);
-                            float timestamp = (current_time - cnx->start_time) / 1e3;
-                            fprintf(packet_log, "%.2f : cnx_id=%s, path_id=%d, packet_length=%d, select_path_stat=%s, prep_seg_stat=%s,  nb_paths=%d, seq_num=%d\n", timestamp, text, path_id, packet->length, status, prepare_segment_status, cnx->nb_paths, packet->sequence_number);
-                        }
-                    }
-                    
 
                     if (ret == 0) {
                         packet_size += segment_length;
@@ -5807,6 +6283,19 @@ int picoquic_prepare_packet_ex(picoquic_cnx_t* cnx,
         }
         if (*send_length > 0) {
             cnx->nb_trains_sent++;
+            if (packet_log != NULL) {                
+                char text[256];
+                picoquic_cnx_id_to_string(text, cnx);
+                float timestamp = (current_time - cnx->start_time) / 1e3;
+                fprintf(packet_log, "%.2f : cnx_id=%s, path_id=%d, packet_length=%d, send_length=%d, select_path_stat=%s, prep_seg_stat=%s,  nb_paths=%d, seq_num=%d\n", timestamp, text, path_id, packet->length, *send_length, status, prepare_segment_status, cnx->nb_paths, packet->sequence_number);
+            }
+            if (mp_scheduling_mode > 0) {
+                if (path_id == 1) {
+                    cnx->quic->llc_last_packet_send_time = current_time;
+                    cnx->quic->llc_usage += *send_length; /* Update the global URLLC usage */
+                    cnx->curr_llc_usage += *send_length; /* Update per-connection URLLC usage */
+                }
+            }
         }
         // if (packet->ptype == picoquic_packet_1rtt_protected) {
         //     printf("%.4f - path_id=%d seq=%d size=%d offset=%d\n", current_time/1e6, path_id, packet->sequence_number, packet->length, packet->bytes);
@@ -5960,14 +6449,23 @@ int picoquic_prepare_next_packet(picoquic_quic_t* quic,
         p_addr_to, p_addr_from, if_index, log_cid, p_last_cnx, NULL);
 }
 
-void picoquic_enable_mp_scheduling() {
-    is_mp_scheduling_active = 1;
+void picoquic_enable_mp_scheduling(int scheduling_mode) {
+    mp_scheduling_mode = scheduling_mode;
 }
 
 int picoquic_set_packet_log(char* log_fpath) {
     packet_log_path = log_fpath;
     packet_log = fopen(log_fpath, "w");
     if (packet_log == NULL) {
+        return -1;
+    }
+    return 0;
+}
+
+int picoquic_set_msg_log(char* log_fpath) {
+    msg_log_path = log_fpath;
+    msg_log_fp = fopen(log_fpath, "w");
+    if (msg_log_fp == NULL) {
         return -1;
     }
     return 0;

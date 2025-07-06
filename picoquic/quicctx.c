@@ -697,7 +697,6 @@ picoquic_quic_t* picoquic_create(uint32_t max_nb_connections,
 
             picosplay_init_tree(&quic->token_reuse_tree, picoquic_registered_token_compare,
                 picoquic_registered_token_create, picoquic_registered_token_delete, picoquic_registered_token_value);
-
             if (quic->table_cnx_by_id == NULL || quic->table_cnx_by_net == NULL ||
                 quic->table_cnx_by_icid == NULL || quic->table_cnx_by_secret == NULL ||
                 quic->table_issued_tickets == NULL) {
@@ -3243,6 +3242,8 @@ picoquic_stream_head_t* picoquic_create_stream(picoquic_cnx_t* cnx, uint64_t str
         if (stream_id >= cnx->next_stream_id[STREAM_TYPE_FROM_ID(stream_id)]) {
             cnx->next_stream_id[STREAM_TYPE_FROM_ID(stream_id)] = NEXT_STREAM_ID_FOR_TYPE(stream_id);
         }
+
+        stream->path_affinity = -1;
     }
 
     return stream;
@@ -3902,6 +3903,11 @@ picoquic_cnx_t* picoquic_create_cnx(picoquic_quic_t* quic,
     if (cnx != NULL && !cnx->client_mode) {
         picoquic_log_new_connection(cnx);
     }
+
+    /* Added for initializing experimental attributes of cnx */
+    cnx->curr_llc_usage = 0;
+    cnx->llc_last_adjust_time = 0;
+    cnx->predicted_last_packet_arrival_time = 0;
 
     return cnx;
 }

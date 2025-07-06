@@ -91,6 +91,7 @@ void browser(int thread_id) {
             break;
         }
         if (!jobQueue.empty()) {
+            printf("%d: jobqueue size = %d\n", thread_id, jobQueue.size());
             job = jobQueue.front();
             jobQueue.pop();
             acquired = true;
@@ -110,21 +111,9 @@ void browser(int thread_id) {
                     float start_time = activities[job.id]["startTime"];
                     float end_time = activities[job.id]["endTime"];
                     float duration = end_time - start_time;
-                    string priority = activities[job.id]["chromeAssignedPriority"];
-
-                    duration = 5;
-                    // if (priority.find("VeryHigh") != string::npos) {
-                    //     duration = 5;
-                    // } else if (priority.find("High") != string::npos) {
-                    //     duration = 5;
-                    // }
-
-                    // if (job.id.find("Networking_0") != string::npos) {
-                    //     duration = 5;
-                    // }
-
+                    duration = duration / 2;
                     // Download files
-                    printf("%d: %s, download url=%s, prio=%s, size=%d bytes, start=%f, end=%f, duration =%.f\n", thread_id, job.id.c_str(), url.c_str(), priority.c_str(), start_time, end_time, duration);
+                    printf("%d: %s, download url=%s, size=%d bytes, start=%f, end=%f, duration =%.f\n", thread_id, job.id.c_str(), url.c_str(), size_bytes, start_time, end_time, duration);
                     std::this_thread::sleep_for(chrono::milliseconds((int) duration));
                 } else if (job.id.find("Loading") != string::npos || job.id.find("Scripting") != string::npos) {
                     float start_time = activities[job.id]["startTime"];
@@ -180,7 +169,7 @@ int main(int argc, char *argv[]) {
     if(argc > 1) {
         dep_fpath = string(argv[1]);
     } else {
-        dep_fpath = "web_browsing/dep_graphs/0_www.microsoft.com.json";
+        dep_fpath = "web_browsing/dep_graphs/0_www.dropbox.com.json";
     }
     // printf("Dep file: %s\n", dep_fpath.c_str());
 
@@ -235,6 +224,21 @@ int main(int argc, char *argv[]) {
 
     printf("Activity size = %d\n", activities.size());
 
+    float load_time = loading_logs[0]["load"];
+    printf("Load = %f\n", load_time);
+
+    float critical_path_time = 0;
+    for (json id : critical_path) {
+        string activity_id = id;
+        float duration = (float) activities[activity_id]["endTime"] - (float) activities[activity_id]["startTime"];
+        cout << activity_id << " : " << duration << endl;
+        critical_path_time += duration;
+    }
+
+    printf("Critical path = %f\n", critical_path_time);
+
+
+
     // // The list of activities that the "key" activity_id affects 
     // map<string, vector<Activity>> affected_activities;
     // // The list of activities that have to be completed / started for certain period 
@@ -272,13 +276,34 @@ int main(int argc, char *argv[]) {
         dependency_degree_mp[a2] += 1;
     }
 
-    // // Print activity list
-    // printf("*** Activities ***\n");
-    // for (auto const& activity : activities) {
-    //     printf("%s\n", activity.first.c_str());
-    // }
 
-    // // Print the affected activities
+
+    // Print activity list
+    printf("*** Activities ***\n");
+    map<string, int> type_count_mp;
+    for (auto const& activity : activities) {
+        string activity_id = activity.first;
+        if (activity_id.find("Networking") != string::npos) {
+            // printf("%s\n", activity.first.c_str());
+            string mimeType = activity.second["mimeType"];
+            if (type_count_mp.find(mimeType) == type_count_mp.end()) {
+                type_count_mp[mimeType] = 0;
+            }
+            type_count_mp[mimeType] += 1;
+        }
+    }
+
+    cout << "*** TYPE count ***" << endl;
+    int total = 0;
+    for (auto const& mimeType : type_count_mp) {
+        string type = mimeType.first; 
+        cout << type << " : " << type_count_mp[type] << endl;
+        total += type_count_mp[type];
+    }
+    cout << "Total = " << total << endl;
+
+
+    // Print the affected activities
     // printf("*** Dependency list ***\n");
     // for (auto const& node : dependency_graph_mp) {
     //     printf("%s -> {", node.first.c_str());
@@ -320,48 +345,30 @@ int main(int argc, char *argv[]) {
     //         }
     //     }
     // }
-
-    // printf("*** Unvisited activiy id ***\n");
+    
+    // // Populate the first job (activity with zero dependency degree)
     // for (auto const& activity : activities) {
-    //     if (completed.find(activity.first) == completed.end()) {
-    //         int dep_degree = 0;
-    //         if (dependency_degree_mp.find(activity.first) != dependency_degree_mp.end()) {
-    //             dep_degree = dependency_degree_mp[activity.first];
-    //         }
-    //         printf("%s:%d\n", activity.first.c_str(), dep_degree);
+    //     if (dependency_degree_mp.find(activity.first) == dependency_degree_mp.end()) {
+    //         Job job = {activity.first};
+    //         jobQueue.emplace(job);
     //     }
     // }
-
-    printf("*** Start browsing ***\n");
-    // string input_url = "http://fastlane.rubiconproject.com/a/api/fastlane.json?account_id=11078&size_id=15&p_pos=atf&rp_floo";
-    // URLParser::HTTP_URL http_url = URLParser::Parse(input_url);
-    // cout << "HOST = " << http_url.host << endl;
-    // for (auto path : http_url.path)
-	// 	std::cout << "path:[" << path << "]" << std::endl;
     
-    // Populate the first job (activity with zero dependency degree)
-    for (auto const& activity : activities) {
-        if (dependency_degree_mp.find(activity.first) == dependency_degree_mp.end()) {
-            Job job = {activity.first};
-            jobQueue.emplace(job);
-        }
-    }
-    
-    int numThreads = 10;
-    auto now = chrono::steady_clock::now();
+    // int numThreads = 10;
+    // auto now = chrono::steady_clock::now();
 
-    // Create and start the thread pool
-    vector<thread> threadPool;
-    for (int i = 0; i < numThreads; ++i) {
-        threadPool.emplace_back(browser, i);
-    }
+    // // Create and start the thread pool
+    // vector<thread> threadPool;
+    // for (int i = 0; i < numThreads; ++i) {
+    //     threadPool.emplace_back(browser, i);
+    // }
 
-    // Wait for all threads in the pool to finish
-    for (auto& thread : threadPool) {
-            thread.join();
-    }
+    // // Wait for all threads in the pool to finish
+    // for (auto& thread : threadPool) {
+    //         thread.join();
+    // }
 
 
-    float duration_ms = chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now() - now).count();
-    printf("All jobs processed, duration=%f ms\n", duration_ms);
+    // float duration_ms = chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now() - now).count();
+    // printf("All jobs processed, duration=%f ms\n", duration_ms);
 }

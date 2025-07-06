@@ -1,0 +1,3086 @@
+[
+    {
+        "load": 2310.26,
+        "cpu_time": 2312879
+    },
+    {
+        "id": "https://www.glassdoor.com/index.htm",
+        "objs": [
+            {
+                "activityId": "Networking_0",
+                "id": "11994.1",
+                "startTime": 198.946,
+                "endTime": 893.733,
+                "mimeType": "text/html",
+                "chromeAssignedPriority": "VeryHigh",
+                "url": "https://www.glassdoor.com/index.htm",
+                "fromScript": "Null",
+                "transferSize": 4080,
+                "responseReceivedTime": 670.519,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_0",
+                "url": "https://www.glassdoor.com/index.htm",
+                "startTime": 819.008,
+                "endTime": 820.18
+            },
+            {
+                "activityId": "Scripting_1",
+                "url": "https://www.glassdoor.com/index.htm",
+                "startTime": 829.35,
+                "endTime": 829.662
+            },
+            {
+                "activityId": "Scripting_2",
+                "url": "https://www.glassdoor.com/index.htm",
+                "startTime": 938.114,
+                "endTime": 938.679
+            },
+            {
+                "activityId": "Scripting_3",
+                "url": "https://www.glassdoor.com/index.htm",
+                "startTime": 938.727,
+                "endTime": 938.782
+            },
+            {
+                "activityId": "Scripting_4",
+                "url": "https://www.glassdoor.com/index.htm",
+                "startTime": 938.812,
+                "endTime": 939.858
+            },
+            {
+                "activityId": "Scripting_5",
+                "url": "https://www.glassdoor.com/index.htm",
+                "startTime": 939.905,
+                "endTime": 940.278
+            },
+            {
+                "activityId": "Scripting_6",
+                "url": "https://www.glassdoor.com/index.htm",
+                "startTime": 946.617,
+                "endTime": 953.558
+            },
+            {
+                "activityId": "Scripting_7",
+                "url": "https://www.glassdoor.com/index.htm",
+                "startTime": 953.719,
+                "endTime": 954.083
+            },
+            {
+                "activityId": "Scripting_8",
+                "url": "https://www.glassdoor.com/index.htm",
+                "startTime": 955.459,
+                "endTime": 961.058
+            },
+            {
+                "activityId": "Loading_1",
+                "fromScript": null,
+                "styleSheetUrl": null,
+                "url": "https://www.glassdoor.com/index.htm",
+                "name": "ParseHTML",
+                "startTime": 673.613,
+                "endTime": 675.968
+            },
+            {
+                "activityId": "Loading_2",
+                "fromScript": null,
+                "styleSheetUrl": null,
+                "url": "https://www.glassdoor.com/index.htm",
+                "name": "ParseHTML",
+                "startTime": 676.083,
+                "endTime": 688.826
+            },
+            {
+                "activityId": "Loading_13",
+                "fromScript": null,
+                "styleSheetUrl": null,
+                "url": "https://www.glassdoor.com/index.htm",
+                "name": "ParseHTML",
+                "startTime": 820.213,
+                "endTime": 825.869
+            },
+            {
+                "activityId": "Loading_14",
+                "fromScript": null,
+                "styleSheetUrl": null,
+                "url": "https://www.glassdoor.com/index.htm",
+                "name": "ParseHTML",
+                "startTime": 829.289,
+                "endTime": 834.674
+            },
+            {
+                "activityId": "Loading_15",
+                "fromScript": null,
+                "styleSheetUrl": null,
+                "url": "https://www.glassdoor.com/index.htm",
+                "name": "ParseHTML",
+                "startTime": 925.116,
+                "endTime": 928.052
+            },
+            {
+                "activityId": "Loading_16",
+                "fromScript": null,
+                "styleSheetUrl": null,
+                "url": "https://www.glassdoor.com/index.htm",
+                "name": "ParseHTML",
+                "startTime": 938.026,
+                "endTime": 1039.189
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/seo-pages/assets/_next/static/css/4de6191de35fdc12.css",
+        "objs": [
+            {
+                "activityId": "Networking_1",
+                "id": "11994.2",
+                "startTime": 672.023,
+                "endTime": 746.778,
+                "mimeType": "text/css",
+                "chromeAssignedPriority": "VeryHigh",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/css/4de6191de35fdc12.css",
+                "fromScript": "Null",
+                "transferSize": 273,
+                "responseReceivedTime": 719.48,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Loading_10",
+                "fromScript": null,
+                "styleSheetUrl": "https://www.glassdoor.com/seo-pages/assets/_next/static/css/4de6191de35fdc12.css",
+                "url": null,
+                "name": "ParseAuthorStyleSheet",
+                "startTime": 820.4,
+                "endTime": 820.526
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/seo-pages/assets/_next/static/css/d3082f691d428dbf.css",
+        "objs": [
+            {
+                "activityId": "Networking_2",
+                "id": "11994.3",
+                "startTime": 672.091,
+                "endTime": 746.839,
+                "mimeType": "text/css",
+                "chromeAssignedPriority": "VeryHigh",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/css/d3082f691d428dbf.css",
+                "fromScript": "Null",
+                "transferSize": 17198,
+                "responseReceivedTime": 719.791,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Loading_11",
+                "fromScript": null,
+                "styleSheetUrl": "https://www.glassdoor.com/seo-pages/assets/_next/static/css/d3082f691d428dbf.css",
+                "url": null,
+                "name": "ParseAuthorStyleSheet",
+                "startTime": 820.646,
+                "endTime": 824.386
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/seo-pages/assets/_next/static/css/feb7e2f3100cbc94.css",
+        "objs": [
+            {
+                "activityId": "Networking_3",
+                "id": "11994.4",
+                "startTime": 672.138,
+                "endTime": 747.07,
+                "mimeType": "text/css",
+                "chromeAssignedPriority": "VeryHigh",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/css/feb7e2f3100cbc94.css",
+                "fromScript": "Null",
+                "transferSize": 1344,
+                "responseReceivedTime": 720.019,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Loading_12",
+                "fromScript": null,
+                "styleSheetUrl": "https://www.glassdoor.com/seo-pages/assets/_next/static/css/feb7e2f3100cbc94.css",
+                "url": null,
+                "name": "ParseAuthorStyleSheet",
+                "startTime": 824.625,
+                "endTime": 824.785
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/sam-global-nav/static/lib-35f58e99a7017002.min.css",
+        "objs": [
+            {
+                "activityId": "Networking_4",
+                "id": "11994.5",
+                "startTime": 673.677,
+                "endTime": 764.577,
+                "mimeType": "text/css",
+                "chromeAssignedPriority": "VeryHigh",
+                "url": "https://www.glassdoor.com/sam-global-nav/static/lib-35f58e99a7017002.min.css",
+                "fromScript": "Null",
+                "transferSize": 23867,
+                "responseReceivedTime": 740.776,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Loading_3",
+                "fromScript": null,
+                "styleSheetUrl": "https://www.glassdoor.com/sam-global-nav/static/lib-35f58e99a7017002.min.css",
+                "url": null,
+                "name": "ParseAuthorStyleSheet",
+                "startTime": 766.117,
+                "endTime": 778.5279999999999
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/sam-global-nav/static/lockedGlobalNav-52dff0fb08790907.min.css",
+        "objs": [
+            {
+                "activityId": "Networking_5",
+                "id": "11994.6",
+                "startTime": 673.767,
+                "endTime": 793.849,
+                "mimeType": "text/css",
+                "chromeAssignedPriority": "VeryHigh",
+                "url": "https://www.glassdoor.com/sam-global-nav/static/lockedGlobalNav-52dff0fb08790907.min.css",
+                "fromScript": "Null",
+                "transferSize": 149,
+                "responseReceivedTime": 762.217,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Loading_6",
+                "fromScript": null,
+                "styleSheetUrl": "https://www.glassdoor.com/sam-global-nav/static/lockedGlobalNav-52dff0fb08790907.min.css",
+                "url": null,
+                "name": "ParseAuthorStyleSheet",
+                "startTime": 793.865,
+                "endTime": 793.888
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/garnish/static/css/gd-vendor.bundle.67722.css",
+        "objs": [
+            {
+                "activityId": "Networking_6",
+                "id": "11994.7",
+                "startTime": 673.824,
+                "endTime": 794.057,
+                "mimeType": "text/css",
+                "chromeAssignedPriority": "VeryHigh",
+                "url": "https://www.glassdoor.com/garnish/static/css/gd-vendor.bundle.67722.css",
+                "fromScript": "Null",
+                "transferSize": 4352,
+                "responseReceivedTime": 741.106,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Loading_7",
+                "fromScript": null,
+                "styleSheetUrl": "https://www.glassdoor.com/garnish/static/css/gd-vendor.bundle.67722.css",
+                "url": null,
+                "name": "ParseAuthorStyleSheet",
+                "startTime": 794.994,
+                "endTime": 808.825
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/garnish/static/css/gd-core.bundle.d472c.css",
+        "objs": [
+            {
+                "activityId": "Networking_7",
+                "id": "11994.8",
+                "startTime": 673.868,
+                "endTime": 809.057,
+                "mimeType": "text/css",
+                "chromeAssignedPriority": "VeryHigh",
+                "url": "https://www.glassdoor.com/garnish/static/css/gd-core.bundle.d472c.css",
+                "fromScript": "Null",
+                "transferSize": 6748,
+                "responseReceivedTime": 760.644,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Loading_8",
+                "fromScript": null,
+                "styleSheetUrl": "https://www.glassdoor.com/garnish/static/css/gd-core.bundle.d472c.css",
+                "url": null,
+                "name": "ParseAuthorStyleSheet",
+                "startTime": 809.27,
+                "endTime": 811.299
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/garnish/static/css/gd-footer.bundle.d7248.css",
+        "objs": [
+            {
+                "activityId": "Networking_8",
+                "id": "11994.9",
+                "startTime": 673.919,
+                "endTime": 811.42,
+                "mimeType": "text/css",
+                "chromeAssignedPriority": "VeryHigh",
+                "url": "https://www.glassdoor.com/garnish/static/css/gd-footer.bundle.d7248.css",
+                "fromScript": "Null",
+                "transferSize": 2422,
+                "responseReceivedTime": 762.043,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Loading_9",
+                "fromScript": null,
+                "styleSheetUrl": "https://www.glassdoor.com/garnish/static/css/gd-footer.bundle.d7248.css",
+                "url": null,
+                "name": "ParseAuthorStyleSheet",
+                "startTime": 811.471,
+                "endTime": 811.773
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/garnish/static/css/gd-marketingBanner.bundle.2f84c.css",
+        "objs": [
+            {
+                "activityId": "Networking_9",
+                "id": "11994.10",
+                "startTime": 673.97,
+                "endTime": 780.914,
+                "mimeType": "text/css",
+                "chromeAssignedPriority": "VeryHigh",
+                "url": "https://www.glassdoor.com/garnish/static/css/gd-marketingBanner.bundle.2f84c.css",
+                "fromScript": "Null",
+                "transferSize": 26224,
+                "responseReceivedTime": 741.543,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Loading_4",
+                "fromScript": null,
+                "styleSheetUrl": "https://www.glassdoor.com/garnish/static/css/gd-marketingBanner.bundle.2f84c.css",
+                "url": null,
+                "name": "ParseAuthorStyleSheet",
+                "startTime": 781.177,
+                "endTime": 790.846
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/garnish/static/css/gd-userAlert.bundle.02516.css",
+        "objs": [
+            {
+                "activityId": "Networking_10",
+                "id": "11994.11",
+                "startTime": 674.023,
+                "endTime": 791.038,
+                "mimeType": "text/css",
+                "chromeAssignedPriority": "VeryHigh",
+                "url": "https://www.glassdoor.com/garnish/static/css/gd-userAlert.bundle.02516.css",
+                "fromScript": "Null",
+                "transferSize": 527,
+                "responseReceivedTime": 742.615,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Loading_5",
+                "fromScript": null,
+                "styleSheetUrl": "https://www.glassdoor.com/garnish/static/css/gd-userAlert.bundle.02516.css",
+                "url": null,
+                "name": "ParseAuthorStyleSheet",
+                "startTime": 791.079,
+                "endTime": 791.14
+            }
+        ]
+    },
+    {
+        "id": "https://unpkg.com/@dotlottie/player-component@2.7.12/dist/dotlottie-player.mjs",
+        "objs": [
+            {
+                "activityId": "Networking_11",
+                "id": "11994.12",
+                "startTime": 674.111,
+                "endTime": 937.749,
+                "mimeType": "text/javascript",
+                "chromeAssignedPriority": "High",
+                "url": "https://unpkg.com/@dotlottie/player-component@2.7.12/dist/dotlottie-player.mjs",
+                "fromScript": "Null",
+                "transferSize": 7794,
+                "responseReceivedTime": 937.342,
+                "statusCode": 200
+            }
+        ]
+    },
+    {
+        "id": "https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js",
+        "objs": [
+            {
+                "activityId": "Networking_12",
+                "id": "11994.13",
+                "startTime": 674.158,
+                "endTime": 930.061,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js",
+                "fromScript": "Null",
+                "transferSize": 3781,
+                "responseReceivedTime": 929.604,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_9",
+                "url": "https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js",
+                "startTime": 961.459,
+                "endTime": 965.667
+            }
+        ]
+    },
+    {
+        "id": "https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js",
+        "objs": [
+            {
+                "activityId": "Networking_13",
+                "id": "11994.14",
+                "startTime": 674.216,
+                "endTime": 890.973,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js",
+                "fromScript": "Null",
+                "transferSize": 37234,
+                "responseReceivedTime": 890.401,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_10",
+                "url": "https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js",
+                "startTime": 966.261,
+                "endTime": 1002.665
+            }
+        ]
+    },
+    {
+        "id": "https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.7.2/prop-types.min.js",
+        "objs": [
+            {
+                "activityId": "Networking_14",
+                "id": "11994.15",
+                "startTime": 674.259,
+                "endTime": 890.28,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.7.2/prop-types.min.js",
+                "fromScript": "Null",
+                "transferSize": 744,
+                "responseReceivedTime": 890.059,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_11",
+                "url": "https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.7.2/prop-types.min.js",
+                "startTime": 1002.84,
+                "endTime": 1004.231
+            }
+        ]
+    },
+    {
+        "id": "https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js",
+        "objs": [
+            {
+                "activityId": "Networking_15",
+                "id": "11994.16",
+                "startTime": 674.302,
+                "endTime": 929.265,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js",
+                "fromScript": "Null",
+                "transferSize": 4313,
+                "responseReceivedTime": 890.69,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_12",
+                "url": "https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js",
+                "startTime": 1004.556,
+                "endTime": 1038.039
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/garnish/static/js/gd-runtime.bundle.d74e2.js",
+        "objs": [
+            {
+                "activityId": "Networking_16",
+                "id": "11994.17",
+                "startTime": 674.343,
+                "endTime": 791.823,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/garnish/static/js/gd-runtime.bundle.d74e2.js",
+                "fromScript": "Null",
+                "transferSize": 845,
+                "responseReceivedTime": 742.787,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_13",
+                "url": "https://www.glassdoor.com/garnish/static/js/gd-runtime.bundle.d74e2.js",
+                "startTime": 1038.158,
+                "endTime": 1039.139
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/garnish/static/js/gd-vendor.bundle.431cd.js",
+        "objs": [
+            {
+                "activityId": "Networking_17",
+                "id": "11994.18",
+                "startTime": 674.401,
+                "endTime": 1081.125,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/garnish/static/js/gd-vendor.bundle.431cd.js",
+                "fromScript": "Null",
+                "transferSize": 26871,
+                "responseReceivedTime": 743.048,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_14",
+                "url": "https://www.glassdoor.com/garnish/static/js/gd-vendor.bundle.431cd.js",
+                "startTime": 1098.004,
+                "endTime": 1103.611
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/garnish/static/js/gd-core.bundle.169cf.js",
+        "objs": [
+            {
+                "activityId": "Networking_18",
+                "id": "11994.19",
+                "startTime": 674.45,
+                "endTime": 760.158,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/garnish/static/js/gd-core.bundle.169cf.js",
+                "fromScript": "Null",
+                "transferSize": 7930,
+                "responseReceivedTime": 759.656,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_15",
+                "url": "https://www.glassdoor.com/garnish/static/js/gd-core.bundle.169cf.js",
+                "startTime": 1103.896,
+                "endTime": 1106.824
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/polyfills-42372ed130431b0a.js",
+        "objs": [
+            {
+                "activityId": "Networking_19",
+                "id": "11994.23",
+                "startTime": 674.542,
+                "endTime": 815.713,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/polyfills-42372ed130431b0a.js",
+                "fromScript": "Null",
+                "transferSize": 5992,
+                "responseReceivedTime": 760.303,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_16",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/polyfills-42372ed130431b0a.js",
+                "startTime": 1107.196,
+                "endTime": 1164.017
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/webpack-229256d1a4a7df3d.js",
+        "objs": [
+            {
+                "activityId": "Networking_20",
+                "id": "11994.24",
+                "startTime": 674.593,
+                "endTime": 793.434,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/webpack-229256d1a4a7df3d.js",
+                "fromScript": "Null",
+                "transferSize": 2361,
+                "responseReceivedTime": 741.869,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_17",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/webpack-229256d1a4a7df3d.js",
+                "startTime": 1164.207,
+                "endTime": 1165.999
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/framework-f28f9722b2223399.js",
+        "objs": [
+            {
+                "activityId": "Networking_21",
+                "id": "11994.25",
+                "startTime": 674.631,
+                "endTime": 817.647,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/framework-f28f9722b2223399.js",
+                "fromScript": "Null",
+                "transferSize": 13293,
+                "responseReceivedTime": 762.55,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_18",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/framework-f28f9722b2223399.js",
+                "startTime": 1166.446,
+                "endTime": 1171.586
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/main-a119e6664a594d44.js",
+        "objs": [
+            {
+                "activityId": "Networking_22",
+                "id": "11994.26",
+                "startTime": 674.668,
+                "endTime": 816.404,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/main-a119e6664a594d44.js",
+                "fromScript": "Null",
+                "transferSize": 5272,
+                "responseReceivedTime": 744.566,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_19",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/main-a119e6664a594d44.js",
+                "startTime": 1171.853,
+                "endTime": 1172.94
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/pages/_app-806615a9886ff778.js",
+        "objs": [
+            {
+                "activityId": "Networking_23",
+                "id": "11994.27",
+                "startTime": 674.729,
+                "endTime": 936.092,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/pages/_app-806615a9886ff778.js",
+                "fromScript": "Null",
+                "transferSize": 10862,
+                "responseReceivedTime": 743.986,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_20",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/pages/_app-806615a9886ff778.js",
+                "startTime": 1176.077,
+                "endTime": 1180.797
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/490-bd0e927bb92f02b0.js",
+        "objs": [
+            {
+                "activityId": "Networking_24",
+                "id": "11994.28",
+                "startTime": 674.77,
+                "endTime": 814.299,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/490-bd0e927bb92f02b0.js",
+                "fromScript": "Null",
+                "transferSize": 10648,
+                "responseReceivedTime": 759.98,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_21",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/490-bd0e927bb92f02b0.js",
+                "startTime": 1180.952,
+                "endTime": 1182.158
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/332-107e3cdadd781920.js",
+        "objs": [
+            {
+                "activityId": "Networking_25",
+                "id": "11994.29",
+                "startTime": 674.811,
+                "endTime": 814.467,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/332-107e3cdadd781920.js",
+                "fromScript": "Null",
+                "transferSize": 2170,
+                "responseReceivedTime": 746.156,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_22",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/332-107e3cdadd781920.js",
+                "startTime": 1182.235,
+                "endTime": 1182.679
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/156-86d0520d9a9785d4.js",
+        "objs": [
+            {
+                "activityId": "Networking_26",
+                "id": "11994.30",
+                "startTime": 674.86,
+                "endTime": 816.576,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/156-86d0520d9a9785d4.js",
+                "fromScript": "Null",
+                "transferSize": 9,
+                "responseReceivedTime": 760.489,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_23",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/156-86d0520d9a9785d4.js",
+                "startTime": 1182.809,
+                "endTime": 1184.518
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/379-f6cbbcd5d3b4b804.js",
+        "objs": [
+            {
+                "activityId": "Networking_27",
+                "id": "11994.31",
+                "startTime": 674.904,
+                "endTime": 816.445,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/379-f6cbbcd5d3b4b804.js",
+                "fromScript": "Null",
+                "transferSize": 574,
+                "responseReceivedTime": 760.831,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_24",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/379-f6cbbcd5d3b4b804.js",
+                "startTime": 1184.697,
+                "endTime": 1185.144
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/974-6af4b01cad2d31e1.js",
+        "objs": [
+            {
+                "activityId": "Networking_28",
+                "id": "11994.32",
+                "startTime": 674.943,
+                "endTime": 818.177,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/974-6af4b01cad2d31e1.js",
+                "fromScript": "Null",
+                "transferSize": 18280,
+                "responseReceivedTime": 762.914,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_25",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/974-6af4b01cad2d31e1.js",
+                "startTime": 1185.739,
+                "endTime": 1186.27
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/546-a07857184670b158.js",
+        "objs": [
+            {
+                "activityId": "Networking_29",
+                "id": "11994.33",
+                "startTime": 674.984,
+                "endTime": 936.977,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/546-a07857184670b158.js",
+                "fromScript": "Null",
+                "transferSize": 130113,
+                "responseReceivedTime": 763.474,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_26",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/546-a07857184670b158.js",
+                "startTime": 1189.244,
+                "endTime": 1190.532
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/pages/index-b939e622b4ae10ec.js",
+        "objs": [
+            {
+                "activityId": "Networking_30",
+                "id": "11994.34",
+                "startTime": 675.029,
+                "endTime": 817.093,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/pages/index-b939e622b4ae10ec.js",
+                "fromScript": "Null",
+                "transferSize": 7545,
+                "responseReceivedTime": 762.754,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_27",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/chunks/pages/index-b939e622b4ae10ec.js",
+                "startTime": 1190.633,
+                "endTime": 1190.773
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/seo-pages/assets/_next/static/bde8ef6e95c4f61f46fdc0db0e3c14933204c51d/_buildManifest.js",
+        "objs": [
+            {
+                "activityId": "Networking_31",
+                "id": "11994.35",
+                "startTime": 675.08,
+                "endTime": 817.139,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/bde8ef6e95c4f61f46fdc0db0e3c14933204c51d/_buildManifest.js",
+                "fromScript": "Null",
+                "transferSize": 1367,
+                "responseReceivedTime": 793.655,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_28",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/bde8ef6e95c4f61f46fdc0db0e3c14933204c51d/_buildManifest.js",
+                "startTime": 1190.81,
+                "endTime": 1191.26
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/seo-pages/assets/_next/static/bde8ef6e95c4f61f46fdc0db0e3c14933204c51d/_ssgManifest.js",
+        "objs": [
+            {
+                "activityId": "Networking_32",
+                "id": "11994.36",
+                "startTime": 675.153,
+                "endTime": 817.179,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/bde8ef6e95c4f61f46fdc0db0e3c14933204c51d/_ssgManifest.js",
+                "fromScript": "Null",
+                "transferSize": 61,
+                "responseReceivedTime": 763.967,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_29",
+                "url": "https://www.glassdoor.com/seo-pages/assets/_next/static/bde8ef6e95c4f61f46fdc0db0e3c14933204c51d/_ssgManifest.js",
+                "startTime": 1191.296,
+                "endTime": 1191.347
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/assets/images/global-nav/locked-community.png",
+        "objs": [
+            {
+                "activityId": "Networking_33",
+                "id": "11994.37",
+                "startTime": 675.203,
+                "endTime": 813.512,
+                "mimeType": "image/webp",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/assets/images/global-nav/locked-community.png",
+                "fromScript": "Null",
+                "transferSize": 15308,
+                "responseReceivedTime": 763.116,
+                "statusCode": 200
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/assets/images/global-nav/locked-jobs.png",
+        "objs": [
+            {
+                "activityId": "Networking_34",
+                "id": "11994.38",
+                "startTime": 675.258,
+                "endTime": 813.693,
+                "mimeType": "image/webp",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/assets/images/global-nav/locked-jobs.png",
+                "fromScript": "Null",
+                "transferSize": 12223,
+                "responseReceivedTime": 763.705,
+                "statusCode": 200
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/assets/images/global-nav/locked-companies.png",
+        "objs": [
+            {
+                "activityId": "Networking_35",
+                "id": "11994.39",
+                "startTime": 675.314,
+                "endTime": 813.808,
+                "mimeType": "image/webp",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/assets/images/global-nav/locked-companies.png",
+                "fromScript": "Null",
+                "transferSize": 15659,
+                "responseReceivedTime": 764.404,
+                "statusCode": 200
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/assets/images/global-nav/locked-salaries.png",
+        "objs": [
+            {
+                "activityId": "Networking_36",
+                "id": "11994.40",
+                "startTime": 675.356,
+                "endTime": 813.917,
+                "mimeType": "image/webp",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/assets/images/global-nav/locked-salaries.png",
+                "fromScript": "Null",
+                "transferSize": 14819,
+                "responseReceivedTime": 764.234,
+                "statusCode": 200
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/assets/images/global-nav/for-employers.png",
+        "objs": [
+            {
+                "activityId": "Networking_37",
+                "id": "11994.41",
+                "startTime": 675.395,
+                "endTime": 817.218,
+                "mimeType": "image/webp",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/assets/images/global-nav/for-employers.png",
+                "fromScript": "Null",
+                "transferSize": 15854,
+                "responseReceivedTime": 814.837,
+                "statusCode": 200
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/assets/fonts/GlassdoorSans-Regular.woff2?v=20240110",
+        "objs": [
+            {
+                "activityId": "Networking_38",
+                "id": "11994.44",
+                "startTime": 675.752,
+                "endTime": 815.26,
+                "mimeType": "binary/octet-stream",
+                "chromeAssignedPriority": "VeryHigh",
+                "url": "https://www.glassdoor.com/assets/fonts/GlassdoorSans-Regular.woff2?v=20240110",
+                "fromScript": "Null",
+                "transferSize": 13298,
+                "responseReceivedTime": 761.838,
+                "statusCode": 200
+            }
+        ]
+    },
+    {
+        "id": "https://www.datadoghq-browser-agent.com/datadog-rum-v4.js",
+        "objs": [
+            {
+                "activityId": "Networking_39",
+                "id": "11994.57",
+                "startTime": 819.932,
+                "endTime": 1079.72,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.datadoghq-browser-agent.com/datadog-rum-v4.js",
+                "fromScript": "https://www.glassdoor.com/index.htm",
+                "transferSize": 18476,
+                "responseReceivedTime": 1077.72,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_36",
+                "url": "https://www.datadoghq-browser-agent.com/datadog-rum-v4.js",
+                "startTime": 1249.083,
+                "endTime": 1311.514
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/assets/fonts/GlassdoorSans-Semibold.woff2?v=20240110",
+        "objs": [
+            {
+                "activityId": "Networking_40",
+                "id": "11994.85",
+                "startTime": 853.746,
+                "endTime": 930.851,
+                "mimeType": "binary/octet-stream",
+                "chromeAssignedPriority": "VeryHigh",
+                "url": "https://www.glassdoor.com/assets/fonts/GlassdoorSans-Semibold.woff2?v=20240110",
+                "fromScript": "Null",
+                "transferSize": 48175,
+                "responseReceivedTime": 891.189,
+                "statusCode": 200
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/garnish/static/js/gd-alertMessage.bundle.ee8e7.js",
+        "objs": [
+            {
+                "activityId": "Networking_41",
+                "id": "11994.87",
+                "startTime": 922.28,
+                "endTime": 1076.027,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/garnish/static/js/gd-alertMessage.bundle.ee8e7.js",
+                "fromScript": "Null",
+                "transferSize": 462,
+                "responseReceivedTime": 1075.482,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_30",
+                "url": "https://www.glassdoor.com/garnish/static/js/gd-alertMessage.bundle.ee8e7.js",
+                "startTime": 1191.374,
+                "endTime": 1191.559
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/garnish/static/js/gd-footer.bundle.94d36.js",
+        "objs": [
+            {
+                "activityId": "Networking_42",
+                "id": "11994.88",
+                "startTime": 922.426,
+                "endTime": 1078.88,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/garnish/static/js/gd-footer.bundle.94d36.js",
+                "fromScript": "Null",
+                "transferSize": 18300,
+                "responseReceivedTime": 1077.971,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_31",
+                "url": "https://www.glassdoor.com/garnish/static/js/gd-footer.bundle.94d36.js",
+                "startTime": 1191.879,
+                "endTime": 1199.633
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/garnish/static/js/gd-marketingBanner.bundle.b9f2a.js",
+        "objs": [
+            {
+                "activityId": "Networking_43",
+                "id": "11994.89",
+                "startTime": 922.501,
+                "endTime": 1079.068,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/garnish/static/js/gd-marketingBanner.bundle.b9f2a.js",
+                "fromScript": "Null",
+                "transferSize": 79955,
+                "responseReceivedTime": 1077.489,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_32",
+                "url": "https://www.glassdoor.com/garnish/static/js/gd-marketingBanner.bundle.b9f2a.js",
+                "startTime": 1200.342,
+                "endTime": 1211.216
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/garnish/static/js/gd-skipToLinks.bundle.f375d.js",
+        "objs": [
+            {
+                "activityId": "Networking_44",
+                "id": "11994.90",
+                "startTime": 922.558,
+                "endTime": 1077.312,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/garnish/static/js/gd-skipToLinks.bundle.f375d.js",
+                "fromScript": "Null",
+                "transferSize": 1251,
+                "responseReceivedTime": 1076.348,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_33",
+                "url": "https://www.glassdoor.com/garnish/static/js/gd-skipToLinks.bundle.f375d.js",
+                "startTime": 1211.311,
+                "endTime": 1211.812
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/garnish/static/js/gd-userAlert.bundle.c2ab0.js",
+        "objs": [
+            {
+                "activityId": "Networking_45",
+                "id": "11994.91",
+                "startTime": 922.618,
+                "endTime": 1214.186,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/garnish/static/js/gd-userAlert.bundle.c2ab0.js",
+                "fromScript": "Null",
+                "transferSize": 25646,
+                "responseReceivedTime": 1078.367,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_34",
+                "url": "https://www.glassdoor.com/garnish/static/js/gd-userAlert.bundle.c2ab0.js",
+                "startTime": 1216.662,
+                "endTime": 1236.326
+            }
+        ]
+    },
+    {
+        "id": "https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015",
+        "objs": [
+            {
+                "activityId": "Networking_46",
+                "id": "11994.92",
+                "startTime": 928.696,
+                "endTime": 1080.882,
+                "mimeType": "text/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015",
+                "fromScript": "Null",
+                "transferSize": 6919,
+                "responseReceivedTime": 1080.585,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_35",
+                "url": "https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015",
+                "startTime": 1236.528,
+                "endTime": 1244.016
+            }
+        ]
+    },
+    {
+        "id": "https://cdn.rudderlabs.com/v1.1/rudder-analytics.min.js",
+        "objs": [
+            {
+                "activityId": "Networking_47",
+                "id": "11994.93",
+                "startTime": 939.492,
+                "endTime": 1417.609,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://cdn.rudderlabs.com/v1.1/rudder-analytics.min.js",
+                "fromScript": "https://www.glassdoor.com/index.htm",
+                "transferSize": 19962,
+                "responseReceivedTime": 1411.807,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_38",
+                "url": "https://cdn.rudderlabs.com/v1.1/rudder-analytics.min.js",
+                "startTime": 1422.068,
+                "endTime": 1477.655
+            }
+        ]
+    },
+    {
+        "id": "https://www.googletagmanager.com/gtm.js?id=GTM-PST2JZ&l=gdGlobals",
+        "objs": [
+            {
+                "activityId": "Networking_48",
+                "id": "11994.94",
+                "startTime": 940.175,
+                "endTime": 1213.604,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.googletagmanager.com/gtm.js?id=GTM-PST2JZ&l=gdGlobals",
+                "fromScript": "https://www.glassdoor.com/index.htm",
+                "transferSize": 24400,
+                "responseReceivedTime": 1079.831,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_37",
+                "url": "https://www.googletagmanager.com/gtm.js?id=GTM-PST2JZ&l=gdGlobals",
+                "startTime": 1317.089,
+                "endTime": 1333.174
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/assets/fonts/GlassdoorSans-Extrabold.woff2?v=20240110",
+        "objs": [
+            {
+                "activityId": "Networking_49",
+                "id": "11994.86",
+                "startTime": 1043.917,
+                "endTime": 1314.093,
+                "mimeType": "binary/octet-stream",
+                "chromeAssignedPriority": "VeryHigh",
+                "url": "https://www.glassdoor.com/assets/fonts/GlassdoorSans-Extrabold.woff2?v=20240110",
+                "fromScript": "Null",
+                "transferSize": 47167,
+                "responseReceivedTime": 1313.391,
+                "statusCode": 200
+            }
+        ]
+    },
+    {
+        "id": "about:blank",
+        "objs": [
+            {
+                "activityId": "Loading_17",
+                "fromScript": "https://www.glassdoor.com/index.htm",
+                "styleSheetUrl": null,
+                "url": "about:blank",
+                "name": "ParseHTML",
+                "startTime": 1246.332,
+                "endTime": 1246.339
+            },
+            {
+                "activityId": "Loading_18",
+                "fromScript": "https://www.glassdoor.com/index.htm",
+                "styleSheetUrl": null,
+                "url": "about:blank",
+                "name": "ParseHTML",
+                "startTime": 1246.348,
+                "endTime": 1246.351
+            },
+            {
+                "activityId": "Loading_19",
+                "fromScript": "https://www.glassdoor.com/cdn-cgi/challenge-platform/h/g/scripts/jsd/6fab0cec561d/main.js?",
+                "styleSheetUrl": null,
+                "url": "about:blank",
+                "name": "ParseHTML",
+                "startTime": 1481.101,
+                "endTime": 1481.139
+            },
+            {
+                "activityId": "Loading_20",
+                "fromScript": "https://www.glassdoor.com/cdn-cgi/challenge-platform/h/g/scripts/jsd/6fab0cec561d/main.js?",
+                "styleSheetUrl": null,
+                "url": "about:blank",
+                "name": "ParseHTML",
+                "startTime": 1481.574,
+                "endTime": 1481.598
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/cdn-cgi/challenge-platform/h/g/scripts/jsd/6fab0cec561d/main.js?",
+        "objs": [
+            {
+                "activityId": "Networking_50",
+                "id": "11994.101",
+                "startTime": 1333.587,
+                "endTime": 1418.776,
+                "mimeType": "application/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://www.glassdoor.com/cdn-cgi/challenge-platform/h/g/scripts/jsd/6fab0cec561d/main.js?",
+                "fromScript": "Null",
+                "transferSize": 3917,
+                "responseReceivedTime": 1418.359,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_39",
+                "url": "https://www.glassdoor.com/cdn-cgi/challenge-platform/h/g/scripts/jsd/6fab0cec561d/main.js?",
+                "startTime": 1477.819,
+                "endTime": 1629.908
+            }
+        ]
+    },
+    {
+        "id": "https://polyfill-fastly.io/v3/polyfill.min.js?version=3.111.0&features=Number.isNaN%2CURL%2CArray.prototype.find%2CArray.prototype.includes%2CPromise%2CString.prototype.endsWith%2CString.prototype.includes%2CString.prototype.startsWith%2CObject.entries%2CObject.values%2CElement.prototype.dataset%2CString.prototype.replaceAll%2CTextEncoder%2Cnavigator.sendBeacon",
+        "objs": [
+            {
+                "activityId": "Networking_51",
+                "id": "11994.102",
+                "startTime": 1475.2,
+                "endTime": 2288.614,
+                "mimeType": "text/javascript",
+                "chromeAssignedPriority": "Low",
+                "url": "https://polyfill-fastly.io/v3/polyfill.min.js?version=3.111.0&features=Number.isNaN%2CURL%2CArray.prototype.find%2CArray.prototype.includes%2CPromise%2CString.prototype.endsWith%2CString.prototype.includes%2CString.prototype.startsWith%2CObject.entries%2CObject.values%2CElement.prototype.dataset%2CString.prototype.replaceAll%2CTextEncoder%2Cnavigator.sendBeacon",
+                "fromScript": "https://cdn.rudderlabs.com/v1.1/rudder-analytics.min.js",
+                "transferSize": 4908,
+                "responseReceivedTime": 1776.571,
+                "statusCode": 200
+            },
+            {
+                "activityId": "Scripting_40",
+                "url": "https://polyfill-fastly.io/v3/polyfill.min.js?version=3.111.0&features=Number.isNaN%2CURL%2CArray.prototype.find%2CArray.prototype.includes%2CPromise%2CString.prototype.endsWith%2CString.prototype.includes%2CString.prototype.startsWith%2CObject.entries%2CObject.values%2CElement.prototype.dataset%2CString.prototype.replaceAll%2CTextEncoder%2Cnavigator.sendBeacon",
+                "startTime": 2297.084,
+                "endTime": 2303.484
+            }
+        ]
+    },
+    {
+        "id": "https://www.glassdoor.com/cdn-cgi/challenge-platform/h/g/jsd/r/0.10435728364266232:1748834869:L95sCXSdfsWYIqbfkvTz88YqFes2d1xRFyoPUYCNM-c/9494367e3e180ffa",
+        "objs": [
+            {
+                "activityId": "Networking_52",
+                "id": "11994.103",
+                "startTime": 1629.52,
+                "endTime": 1687.199,
+                "mimeType": "text/plain",
+                "chromeAssignedPriority": "High",
+                "url": "https://www.glassdoor.com/cdn-cgi/challenge-platform/h/g/jsd/r/0.10435728364266232:1748834869:L95sCXSdfsWYIqbfkvTz88YqFes2d1xRFyoPUYCNM-c/9494367e3e180ffa",
+                "fromScript": "https://www.glassdoor.com/cdn-cgi/challenge-platform/h/g/scripts/jsd/6fab0cec561d/main.js?",
+                "responseReceivedTime": 1686.937,
+                "statusCode": 200
+            }
+        ]
+    },
+    {
+        "id": "https://api.rudderstack.com/sourceConfig/?p=cdn&v=2.51.2&writeKey=2E61Cod1xHlNX1wv1hqFK4HvMMq",
+        "objs": [
+            {
+                "activityId": "Networking_53",
+                "id": "11994.104",
+                "startTime": 1661.912,
+                "endTime": 1793.401,
+                "mimeType": "text/plain",
+                "chromeAssignedPriority": "High",
+                "url": "https://api.rudderstack.com/sourceConfig/?p=cdn&v=2.51.2&writeKey=2E61Cod1xHlNX1wv1hqFK4HvMMq",
+                "fromScript": "https://www.datadoghq-browser-agent.com/datadog-rum-v4.js",
+                "responseReceivedTime": 1792.898,
+                "statusCode": 204
+            },
+            {
+                "activityId": "Networking_54",
+                "id": "11994.105",
+                "startTime": 1793.591,
+                "endTime": 1847.818,
+                "mimeType": "application/json",
+                "chromeAssignedPriority": "High",
+                "url": "https://api.rudderstack.com/sourceConfig/?p=cdn&v=2.51.2&writeKey=2E61Cod1xHlNX1wv1hqFK4HvMMq",
+                "fromScript": "Null",
+                "transferSize": 572,
+                "responseReceivedTime": 1847.097,
+                "statusCode": 200
+            }
+        ]
+    },
+    {
+        "id": "Rendering",
+        "objs": [
+            {
+                "activityId": "Rendering_3",
+                "startTime": 856.919,
+                "name": "Layout",
+                "endTime": 883.348
+            },
+            {
+                "activityId": "Rendering_4",
+                "startTime": 883.396,
+                "name": "UpdateLayerTree",
+                "endTime": 883.7009999999999
+            },
+            {
+                "activityId": "Rendering_5",
+                "startTime": 1052.394,
+                "name": "Layout",
+                "endTime": 1073.524
+            },
+            {
+                "activityId": "Rendering_6",
+                "startTime": 1073.537,
+                "name": "UpdateLayerTree",
+                "endTime": 1074.113
+            },
+            {
+                "activityId": "Rendering_7",
+                "startTime": 1311.742,
+                "name": "UpdateLayerTree",
+                "endTime": 1311.801
+            },
+            {
+                "activityId": "Rendering_8",
+                "startTime": 1399.082,
+                "name": "Layout",
+                "endTime": 1409.885
+            },
+            {
+                "activityId": "Rendering_9",
+                "startTime": 1409.909,
+                "name": "UpdateLayerTree",
+                "endTime": 1410.392
+            },
+            {
+                "activityId": "Rendering_10",
+                "startTime": 1494.129,
+                "name": "Layout",
+                "endTime": 1494.187
+            },
+            {
+                "activityId": "Rendering_11",
+                "startTime": 1630.322,
+                "name": "UpdateLayerTree",
+                "endTime": 1630.358
+            }
+        ]
+    },
+    {
+        "id": "Painting",
+        "objs": [
+            {
+                "activityId": "Painting_3",
+                "startTime": 29.401,
+                "name": "CompositeLayers",
+                "endTime": 29.675,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_4",
+                "startTime": 59.858,
+                "name": "CompositeLayers",
+                "endTime": 59.977,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_5",
+                "startTime": 90.718,
+                "name": "CompositeLayers",
+                "endTime": 90.974,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_6",
+                "startTime": 121.901,
+                "name": "CompositeLayers",
+                "endTime": 122.163,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_7",
+                "startTime": 152.698,
+                "name": "CompositeLayers",
+                "endTime": 152.89,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_8",
+                "startTime": 183.92,
+                "name": "CompositeLayers",
+                "endTime": 184.181,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_9",
+                "startTime": 214.541,
+                "name": "CompositeLayers",
+                "endTime": 214.653,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_10",
+                "startTime": 245.183,
+                "name": "CompositeLayers",
+                "endTime": 245.36,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_11",
+                "startTime": 275.679,
+                "name": "CompositeLayers",
+                "endTime": 275.855,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_12",
+                "startTime": 305.986,
+                "name": "CompositeLayers",
+                "endTime": 306.138,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_13",
+                "startTime": 336.573,
+                "name": "CompositeLayers",
+                "endTime": 336.725,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_14",
+                "startTime": 367.392,
+                "name": "CompositeLayers",
+                "endTime": 367.515,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_15",
+                "startTime": 398.512,
+                "name": "CompositeLayers",
+                "endTime": 398.638,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_16",
+                "startTime": 429.392,
+                "name": "CompositeLayers",
+                "endTime": 429.538,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_17",
+                "startTime": 453.231,
+                "name": "CompositeLayers",
+                "endTime": 453.435,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_18",
+                "startTime": 462.008,
+                "name": "CompositeLayers",
+                "endTime": 462.125,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_19",
+                "startTime": 491.082,
+                "name": "CompositeLayers",
+                "endTime": 491.284,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_20",
+                "startTime": 521.43,
+                "name": "CompositeLayers",
+                "endTime": 521.596,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_21",
+                "startTime": 553.483,
+                "name": "CompositeLayers",
+                "endTime": 553.621,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_22",
+                "startTime": 584.224,
+                "name": "CompositeLayers",
+                "endTime": 584.799,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_23",
+                "startTime": 617.56,
+                "name": "CompositeLayers",
+                "endTime": 617.742,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_24",
+                "startTime": 647.921,
+                "name": "CompositeLayers",
+                "endTime": 648.069,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_25",
+                "startTime": 742.435,
+                "name": "CompositeLayers",
+                "endTime": 743.631,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_26",
+                "startTime": 748.587,
+                "name": "CompositeLayers",
+                "endTime": 748.701,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_27",
+                "startTime": 795.611,
+                "name": "CompositeLayers",
+                "endTime": 795.791,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_28",
+                "startTime": 805.753,
+                "name": "CompositeLayers",
+                "endTime": 805.962,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_29",
+                "startTime": 836.032,
+                "name": "CompositeLayers",
+                "endTime": 836.646,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_30",
+                "startTime": 866.612,
+                "name": "CompositeLayers",
+                "endTime": 866.984,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_31",
+                "startTime": 883.722,
+                "name": "Paint",
+                "endTime": 883.948
+            },
+            {
+                "activityId": "Painting_32",
+                "startTime": 884.205,
+                "name": "CompositeLayers",
+                "endTime": 884.489,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_33",
+                "startTime": 897.12,
+                "name": "CompositeLayers",
+                "endTime": 897.25,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_34",
+                "startTime": 927.042,
+                "name": "CompositeLayers",
+                "endTime": 927.263,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_35",
+                "startTime": 957.936,
+                "name": "CompositeLayers",
+                "endTime": 958.126,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_36",
+                "startTime": 971.782,
+                "name": "CompositeLayers",
+                "endTime": 971.928,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_37",
+                "startTime": 984.7,
+                "name": "CompositeLayers",
+                "endTime": 984.935,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_38",
+                "startTime": 1067.835,
+                "name": "CompositeLayers",
+                "endTime": 1067.98,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_39",
+                "startTime": 1074.124,
+                "name": "Paint",
+                "endTime": 1074.49
+            },
+            {
+                "activityId": "Painting_40",
+                "startTime": 1074.763,
+                "name": "CompositeLayers",
+                "endTime": 1074.845,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_41",
+                "startTime": 1098.624,
+                "name": "CompositeLayers",
+                "endTime": 1098.844,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_42",
+                "startTime": 1132.442,
+                "name": "CompositeLayers",
+                "endTime": 1132.629,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_43",
+                "startTime": 1162.834,
+                "name": "CompositeLayers",
+                "endTime": 1163.006,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_44",
+                "startTime": 1193.86,
+                "name": "CompositeLayers",
+                "endTime": 1194.057,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_45",
+                "startTime": 1226.54,
+                "name": "CompositeLayers",
+                "endTime": 1226.835,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_46",
+                "startTime": 1245.778,
+                "name": "CompositeLayers",
+                "endTime": 1245.885,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_47",
+                "startTime": 1261.724,
+                "name": "CompositeLayers",
+                "endTime": 1262.224,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_48",
+                "startTime": 1278.132,
+                "name": "CompositeLayers",
+                "endTime": 1278.448,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_49",
+                "startTime": 1295.957,
+                "name": "CompositeLayers",
+                "endTime": 1296.235,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_50",
+                "startTime": 1313.069,
+                "name": "CompositeLayers",
+                "endTime": 1313.161,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_51",
+                "startTime": 1330.068,
+                "name": "CompositeLayers",
+                "endTime": 1330.331,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_52",
+                "startTime": 1361.515,
+                "name": "CompositeLayers",
+                "endTime": 1361.678,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_53",
+                "startTime": 1393.565,
+                "name": "CompositeLayers",
+                "endTime": 1393.74,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_54",
+                "startTime": 1410.407,
+                "name": "Paint",
+                "endTime": 1411.091
+            },
+            {
+                "activityId": "Painting_55",
+                "startTime": 1411.218,
+                "name": "CompositeLayers",
+                "endTime": 1411.422,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_56",
+                "startTime": 1423.773,
+                "name": "CompositeLayers",
+                "endTime": 1423.954,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_57",
+                "startTime": 1455.798,
+                "name": "CompositeLayers",
+                "endTime": 1456.005,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_58",
+                "startTime": 1488.01,
+                "name": "CompositeLayers",
+                "endTime": 1488.139,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_59",
+                "startTime": 1522.047,
+                "name": "CompositeLayers",
+                "endTime": 1522.177,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_60",
+                "startTime": 1553.868,
+                "name": "CompositeLayers",
+                "endTime": 1554.127,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_61",
+                "startTime": 1584.728,
+                "name": "CompositeLayers",
+                "endTime": 1584.95,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_62",
+                "startTime": 1615.68,
+                "name": "CompositeLayers",
+                "endTime": 1615.847,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_63",
+                "startTime": 1630.368,
+                "name": "CompositeLayers",
+                "endTime": 1630.382,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_64",
+                "startTime": 1646.832,
+                "name": "CompositeLayers",
+                "endTime": 1646.987,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_65",
+                "startTime": 1678.389,
+                "name": "CompositeLayers",
+                "endTime": 1678.501,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_66",
+                "startTime": 1715.888,
+                "name": "CompositeLayers",
+                "endTime": 1716.172,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_67",
+                "startTime": 1717.475,
+                "name": "CompositeLayers",
+                "endTime": 1717.694,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_68",
+                "startTime": 1746.309,
+                "name": "CompositeLayers",
+                "endTime": 1746.619,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_69",
+                "startTime": 1776.264,
+                "name": "CompositeLayers",
+                "endTime": 1776.588,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_70",
+                "startTime": 1807.447,
+                "name": "CompositeLayers",
+                "endTime": 1807.82,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_71",
+                "startTime": 1837.643,
+                "name": "CompositeLayers",
+                "endTime": 1837.797,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_72",
+                "startTime": 1867.953,
+                "name": "CompositeLayers",
+                "endTime": 1868.14,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_73",
+                "startTime": 1899.015,
+                "name": "CompositeLayers",
+                "endTime": 1899.262,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_74",
+                "startTime": 1932.321,
+                "name": "CompositeLayers",
+                "endTime": 1932.609,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_75",
+                "startTime": 1963.126,
+                "name": "CompositeLayers",
+                "endTime": 1963.253,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_76",
+                "startTime": 1977.727,
+                "name": "CompositeLayers",
+                "endTime": 1977.887,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_77",
+                "startTime": 1994.207,
+                "name": "CompositeLayers",
+                "endTime": 1994.413,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_78",
+                "startTime": 2025.502,
+                "name": "CompositeLayers",
+                "endTime": 2025.821,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_79",
+                "startTime": 2056.655,
+                "name": "CompositeLayers",
+                "endTime": 2056.948,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_80",
+                "startTime": 2087.172,
+                "name": "CompositeLayers",
+                "endTime": 2087.569,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_81",
+                "startTime": 2117.351,
+                "name": "CompositeLayers",
+                "endTime": 2117.716,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_82",
+                "startTime": 2179.644,
+                "name": "CompositeLayers",
+                "endTime": 2179.934,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_83",
+                "startTime": 2210.46,
+                "name": "CompositeLayers",
+                "endTime": 2210.79,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_84",
+                "startTime": 2241.993,
+                "name": "CompositeLayers",
+                "endTime": 2242.273,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_85",
+                "startTime": 2273.249,
+                "name": "CompositeLayers",
+                "endTime": 2273.493,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_86",
+                "startTime": 2305.625,
+                "name": "CompositeLayers",
+                "endTime": 2305.877,
+                "layerTreeId": 1
+            },
+            {
+                "activityId": "Painting_87",
+                "startTime": 2312.453,
+                "name": "CompositeLayers",
+                "endTime": 2312.879,
+                "layerTreeId": 1
+            }
+        ]
+    },
+    {
+        "id": "Deps",
+        "objs": [
+            {
+                "time": 673.613,
+                "a1": "Networking_0",
+                "a2": "Loading_1"
+            },
+            {
+                "time": 673.677,
+                "a1": "Loading_1",
+                "a2": "Networking_4"
+            },
+            {
+                "time": 673.767,
+                "a1": "Loading_1",
+                "a2": "Networking_5"
+            },
+            {
+                "time": 673.824,
+                "a1": "Loading_1",
+                "a2": "Networking_6"
+            },
+            {
+                "time": 673.868,
+                "a1": "Loading_1",
+                "a2": "Networking_7"
+            },
+            {
+                "time": 673.919,
+                "a1": "Loading_1",
+                "a2": "Networking_8"
+            },
+            {
+                "time": 673.97,
+                "a1": "Loading_1",
+                "a2": "Networking_9"
+            },
+            {
+                "time": 674.023,
+                "a1": "Loading_1",
+                "a2": "Networking_10"
+            },
+            {
+                "time": 674.111,
+                "a1": "Loading_1",
+                "a2": "Networking_11"
+            },
+            {
+                "time": 674.158,
+                "a1": "Loading_1",
+                "a2": "Networking_12"
+            },
+            {
+                "time": 674.216,
+                "a1": "Loading_1",
+                "a2": "Networking_13"
+            },
+            {
+                "time": 674.259,
+                "a1": "Loading_1",
+                "a2": "Networking_14"
+            },
+            {
+                "time": 674.302,
+                "a1": "Loading_1",
+                "a2": "Networking_15"
+            },
+            {
+                "time": 674.343,
+                "a1": "Loading_1",
+                "a2": "Networking_16"
+            },
+            {
+                "time": 674.401,
+                "a1": "Loading_1",
+                "a2": "Networking_17"
+            },
+            {
+                "time": 674.45,
+                "a1": "Loading_1",
+                "a2": "Networking_18"
+            },
+            {
+                "time": 674.542,
+                "a1": "Loading_1",
+                "a2": "Networking_19"
+            },
+            {
+                "time": 674.593,
+                "a1": "Loading_1",
+                "a2": "Networking_20"
+            },
+            {
+                "time": 674.631,
+                "a1": "Loading_1",
+                "a2": "Networking_21"
+            },
+            {
+                "time": 674.668,
+                "a1": "Loading_1",
+                "a2": "Networking_22"
+            },
+            {
+                "time": 674.729,
+                "a1": "Loading_1",
+                "a2": "Networking_23"
+            },
+            {
+                "time": 674.77,
+                "a1": "Loading_1",
+                "a2": "Networking_24"
+            },
+            {
+                "time": 674.811,
+                "a1": "Loading_1",
+                "a2": "Networking_25"
+            },
+            {
+                "time": 674.86,
+                "a1": "Loading_1",
+                "a2": "Networking_26"
+            },
+            {
+                "time": 674.904,
+                "a1": "Loading_1",
+                "a2": "Networking_27"
+            },
+            {
+                "time": 674.943,
+                "a1": "Loading_1",
+                "a2": "Networking_28"
+            },
+            {
+                "time": 674.984,
+                "a1": "Loading_1",
+                "a2": "Networking_29"
+            },
+            {
+                "time": 675.029,
+                "a1": "Loading_1",
+                "a2": "Networking_30"
+            },
+            {
+                "time": 675.08,
+                "a1": "Loading_1",
+                "a2": "Networking_31"
+            },
+            {
+                "time": 675.153,
+                "a1": "Loading_1",
+                "a2": "Networking_32"
+            },
+            {
+                "time": 675.203,
+                "a1": "Loading_1",
+                "a2": "Networking_33"
+            },
+            {
+                "time": 675.258,
+                "a1": "Loading_1",
+                "a2": "Networking_34"
+            },
+            {
+                "time": 675.314,
+                "a1": "Loading_1",
+                "a2": "Networking_35"
+            },
+            {
+                "time": 675.356,
+                "a1": "Loading_1",
+                "a2": "Networking_36"
+            },
+            {
+                "time": 675.395,
+                "a1": "Loading_1",
+                "a2": "Networking_37"
+            },
+            {
+                "time": 675.752,
+                "a1": "Loading_1",
+                "a2": "Networking_38"
+            },
+            {
+                "time": 676.083,
+                "a1": "Networking_0",
+                "a2": "Loading_2"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_1",
+                "a2": "Loading_2"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_4",
+                "a2": "Loading_3"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_9",
+                "a2": "Loading_4"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_10",
+                "a2": "Loading_5"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_5",
+                "a2": "Loading_6"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_6",
+                "a2": "Loading_7"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_7",
+                "a2": "Loading_8"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_8",
+                "a2": "Loading_9"
+            },
+            {
+                "time": 819.008,
+                "a1": "Networking_0",
+                "a2": "Scripting_0"
+            },
+            {
+                "time": 819.932,
+                "a1": "Scripting_0",
+                "a2": "Networking_39"
+            },
+            {
+                "time": 820.213,
+                "a1": "Networking_0",
+                "a2": "Loading_13"
+            },
+            {
+                "time": -1,
+                "a1": "Scripting_0",
+                "a2": "Loading_13"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_2",
+                "a2": "Loading_13"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_1",
+                "a2": "Loading_10"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_2",
+                "a2": "Loading_11"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_3",
+                "a2": "Loading_12"
+            },
+            {
+                "time": 829.289,
+                "a1": "Networking_0",
+                "a2": "Loading_14"
+            },
+            {
+                "time": -1,
+                "a1": "Scripting_0",
+                "a2": "Loading_14"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_13",
+                "a2": "Loading_14"
+            },
+            {
+                "time": 829.35,
+                "a1": "Networking_0",
+                "a2": "Scripting_1"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_14",
+                "a2": "Networking_40"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_14",
+                "a2": "Networking_41"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_14",
+                "a2": "Networking_42"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_14",
+                "a2": "Networking_43"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_14",
+                "a2": "Networking_44"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_14",
+                "a2": "Networking_45"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_0",
+                "a2": "Loading_15"
+            },
+            {
+                "time": -1,
+                "a1": "Scripting_1",
+                "a2": "Loading_15"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_14",
+                "a2": "Loading_15"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_15",
+                "a2": "Networking_46"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_0",
+                "a2": "Loading_16"
+            },
+            {
+                "time": -1,
+                "a1": "Scripting_1",
+                "a2": "Loading_16"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_15",
+                "a2": "Loading_16"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_0",
+                "a2": "Scripting_2"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_0",
+                "a2": "Scripting_3"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_0",
+                "a2": "Scripting_4"
+            },
+            {
+                "time": 939.492,
+                "a1": "Scripting_4",
+                "a2": "Networking_47"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_0",
+                "a2": "Scripting_5"
+            },
+            {
+                "time": 940.175,
+                "a1": "Scripting_5",
+                "a2": "Networking_48"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_0",
+                "a2": "Scripting_6"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_0",
+                "a2": "Scripting_7"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_0",
+                "a2": "Scripting_8"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_12",
+                "a2": "Scripting_9"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_13",
+                "a2": "Scripting_10"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_14",
+                "a2": "Scripting_11"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_15",
+                "a2": "Scripting_12"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_16",
+                "a2": "Scripting_13"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_6",
+                "a2": "Scripting_13"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_7",
+                "a2": "Scripting_13"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_8",
+                "a2": "Scripting_13"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_9",
+                "a2": "Scripting_13"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_10",
+                "a2": "Scripting_13"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_11",
+                "a2": "Scripting_13"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_12",
+                "a2": "Scripting_13"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_16",
+                "a2": "Networking_49"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_17",
+                "a2": "Scripting_14"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_18",
+                "a2": "Scripting_15"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_3",
+                "a2": "Scripting_15"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_4",
+                "a2": "Scripting_15"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_5",
+                "a2": "Scripting_15"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_6",
+                "a2": "Scripting_15"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_7",
+                "a2": "Scripting_15"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_8",
+                "a2": "Scripting_15"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_9",
+                "a2": "Scripting_15"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_10",
+                "a2": "Scripting_15"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_11",
+                "a2": "Scripting_15"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_12",
+                "a2": "Scripting_15"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_19",
+                "a2": "Scripting_16"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_10",
+                "a2": "Scripting_16"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_11",
+                "a2": "Scripting_16"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_12",
+                "a2": "Scripting_16"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_20",
+                "a2": "Scripting_17"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_6",
+                "a2": "Scripting_17"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_7",
+                "a2": "Scripting_17"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_8",
+                "a2": "Scripting_17"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_9",
+                "a2": "Scripting_17"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_10",
+                "a2": "Scripting_17"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_11",
+                "a2": "Scripting_17"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_12",
+                "a2": "Scripting_17"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_21",
+                "a2": "Scripting_18"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_10",
+                "a2": "Scripting_18"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_11",
+                "a2": "Scripting_18"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_12",
+                "a2": "Scripting_18"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_22",
+                "a2": "Scripting_19"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_10",
+                "a2": "Scripting_19"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_11",
+                "a2": "Scripting_19"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_12",
+                "a2": "Scripting_19"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_23",
+                "a2": "Scripting_20"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_24",
+                "a2": "Scripting_21"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_10",
+                "a2": "Scripting_21"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_11",
+                "a2": "Scripting_21"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_12",
+                "a2": "Scripting_21"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_25",
+                "a2": "Scripting_22"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_10",
+                "a2": "Scripting_22"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_11",
+                "a2": "Scripting_22"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_12",
+                "a2": "Scripting_22"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_26",
+                "a2": "Scripting_23"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_10",
+                "a2": "Scripting_23"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_11",
+                "a2": "Scripting_23"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_12",
+                "a2": "Scripting_23"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_27",
+                "a2": "Scripting_24"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_10",
+                "a2": "Scripting_24"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_11",
+                "a2": "Scripting_24"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_12",
+                "a2": "Scripting_24"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_28",
+                "a2": "Scripting_25"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_10",
+                "a2": "Scripting_25"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_11",
+                "a2": "Scripting_25"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_12",
+                "a2": "Scripting_25"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_29",
+                "a2": "Scripting_26"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_30",
+                "a2": "Scripting_27"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_10",
+                "a2": "Scripting_27"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_11",
+                "a2": "Scripting_27"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_12",
+                "a2": "Scripting_27"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_31",
+                "a2": "Scripting_28"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_10",
+                "a2": "Scripting_28"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_11",
+                "a2": "Scripting_28"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_12",
+                "a2": "Scripting_28"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_32",
+                "a2": "Scripting_29"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_10",
+                "a2": "Scripting_29"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_11",
+                "a2": "Scripting_29"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_12",
+                "a2": "Scripting_29"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_41",
+                "a2": "Scripting_30"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_42",
+                "a2": "Scripting_31"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_43",
+                "a2": "Scripting_32"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_44",
+                "a2": "Scripting_33"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_45",
+                "a2": "Scripting_34"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_46",
+                "a2": "Scripting_35"
+            },
+            {
+                "time": -1,
+                "a1": "Scripting_8",
+                "a2": "Loading_17"
+            },
+            {
+                "time": -1,
+                "a1": "Scripting_8",
+                "a2": "Loading_18"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_39",
+                "a2": "Scripting_36"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_48",
+                "a2": "Scripting_37"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_16",
+                "a2": "Networking_50"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_47",
+                "a2": "Scripting_38"
+            },
+            {
+                "time": 1475.2,
+                "a1": "Scripting_38",
+                "a2": "Networking_51"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_50",
+                "a2": "Scripting_39"
+            },
+            {
+                "time": 1481.101,
+                "a1": "Scripting_39",
+                "a2": "Loading_19"
+            },
+            {
+                "time": 1481.574,
+                "a1": "Scripting_39",
+                "a2": "Loading_20"
+            },
+            {
+                "time": 1629.52,
+                "a1": "Scripting_39",
+                "a2": "Networking_52"
+            },
+            {
+                "time": -1,
+                "a1": "Scripting_36",
+                "a2": "Networking_53"
+            },
+            {
+                "time": -1,
+                "a1": "Loading_16",
+                "a2": "Networking_54"
+            },
+            {
+                "time": -1,
+                "a1": "Networking_51",
+                "a2": "Scripting_40"
+            }
+        ]
+    },
+    {
+        "id": "Netlog",
+        "dns": {},
+        "sockets": {
+            "0x93d": {
+                "bytes_in": 0,
+                "bytes_out": 0
+            },
+            "0x728": {
+                "bytes_in": 0,
+                "bytes_out": 0
+            },
+            "0x731": {
+                "bytes_in": 0,
+                "bytes_out": 0
+            },
+            "0x79c": {
+                "bytes_in": 0,
+                "bytes_out": 0
+            },
+            "0x77d": {
+                "bytes_in": 0,
+                "bytes_out": 0
+            },
+            "0x8d9": {
+                "bytes_in": 0,
+                "bytes_out": 0
+            },
+            "0x939": {
+                "bytes_in": 0,
+                "bytes_out": 0
+            },
+            "0x92a": {
+                "bytes_in": 0,
+                "bytes_out": 0
+            },
+            "0x79d": {
+                "bytes_in": 0,
+                "bytes_out": 0
+            },
+            "0x950": {
+                "bytes_in": 2365705,
+                "bytes_out": 16211
+            },
+            "0xa29": {
+                "bytes_in": 4052,
+                "bytes_out": 300
+            },
+            "0xa2a": {
+                "bytes_in": 4418,
+                "bytes_out": 472
+            },
+            "0xa2b": {
+                "bytes_in": 3185,
+                "bytes_out": 340
+            },
+            "0xa2c": {
+                "bytes_in": 3184,
+                "bytes_out": 336
+            },
+            "0xa2d": {
+                "bytes_in": 140991,
+                "bytes_out": 950
+            },
+            "0xa2e": {
+                "bytes_in": 74882,
+                "bytes_out": 1020
+            },
+            "0xa2f": {
+                "bytes_in": 11995,
+                "bytes_out": 732
+            },
+            "0xa51": {
+                "bytes_in": 55643,
+                "bytes_out": 739
+            },
+            "0xa84": {
+                "bytes_in": 10841,
+                "bytes_out": 785
+            },
+            "0xa88": {
+                "bytes_in": 0,
+                "bytes_out": 0
+            },
+            "0xaa4": {
+                "bytes_in": 41461,
+                "bytes_out": 723
+            },
+            "0xac2": {
+                "bytes_in": 8589,
+                "bytes_out": 945
+            },
+            "0xac9": {
+                "bytes_in": 7315,
+                "bytes_out": 1000
+            }
+        },
+        "dnsTime": -1,
+        "sockets_bytes_in": 2732261,
+        "sockets_bytes_out": 24553,
+        "ssl_sockets_bytes_out": 17338,
+        "ssl_sockets_bytes_in": 2669003
+    },
+    {
+        "criticalPath": [
+            "Networking_0",
+            "Scripting_4",
+            "Networking_47",
+            "Scripting_38",
+            "Networking_51",
+            "Scripting_40"
+        ],
+        "networkingTime": 1291.53,
+        "computationTime": 755.0
+    }
+]

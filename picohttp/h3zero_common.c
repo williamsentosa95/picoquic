@@ -1086,6 +1086,20 @@ int h3zero_process_request_frame(
 			picoquic_set_stream_priority(cnx, stream_ctx->stream_id, stream_ctx->priority);
 
 			printf("Finish putting data to buffer, stream_id=%d, prio=%d, cnx_id=%d, cnx_nbpaths=%d, total_length=%d\n", stream_ctx->stream_id, stream_ctx->priority, cnx->initial_cnxid.id, cnx->nb_paths, response_length + (o_bytes - buffer));
+
+			// void picoquic_get_peer_addr(picoquic_cnx_t* cnx, struct sockaddr** addr);
+			// void picoquic_get_local_addr(picoquic_cnx_t* cnx, struct sockaddr** addr);
+
+			if (msg_log_fp != NULL) {
+				uint64_t now = picoquic_get_quic_time(cnx->quic);
+				if (msg_log_start_time == 0) {
+					msg_log_start_time = now;
+				}
+				float msg_send_time = (now - msg_log_start_time) / 1e6;
+				fprintf(msg_log_fp, "%f,%d,%d,%d\n", msg_send_time, response_length + (o_bytes - buffer), cnx->initial_cnxid.id, stream_ctx->stream_id);
+				fflush(msg_log_fp);
+			}
+
 			// for (int i=0; i<cnx->nb_paths; i++) {
 			// 	printf("Path %d: bytes_sent=%d\n", i, cnx->path[i]->bytes_sent);
 			// }

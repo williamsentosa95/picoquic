@@ -742,6 +742,17 @@ typedef struct st_picoquic_quic_t {
     struct st_picoquic_unified_logging_t* qlog_fns;
     picoquic_performance_log_fn perflog_fn;
     void* v_perflog_ctx;
+
+    /** Experimental, used for the mp steering logic**/
+    float llc_usage;
+    uint64_t llc_last_adjust_time;
+    uint64_t llc_last_packet_send_time;
+    float predicted_last_packet_arrival_time;
+    float llc_bandwidth_mbps;
+    float llc_owd;
+    float hb_owd;
+    float alpha;
+
 } picoquic_quic_t;
 
 picoquic_packet_context_enum picoquic_context_from_epoch(int epoch);
@@ -848,6 +859,7 @@ typedef struct st_picoquic_stream_head_t {
 
     /** Current stream data length **/
     uint64_t current_total_length;
+    int path_affinity;
 
 } picoquic_stream_head_t;
 
@@ -1510,6 +1522,11 @@ typedef struct st_picoquic_cnx_t {
     uint16_t log_unique;
     FILE* f_binlog;
     char* binlog_file_name;
+
+    /* Experimental: for packet/msg steering */
+    float predicted_last_packet_arrival_time;
+    float llc_last_adjust_time; 
+    float curr_llc_usage; /* Track the curr usage of the LLC IF it is not globally known */
 
 } picoquic_cnx_t;
 

@@ -13,8 +13,6 @@
 
 #else /* Linux */
 
-#define ENABLE_PICOQUIC_MP_SCHEDULING 0
-
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -37,13 +35,6 @@
 
 #endif
 
-#define SERVER_PORT 9000
-
-#define SERVER_ADDRESS "100.64.0.1"
-#define SECOND_IFACE_IP "100.64.0.4"
-
-#define ENABLE_NET_LOG 1
-#define NET_LOG_PATH "/home/william/picoquic-log/emulated_http_mp_log.csv"
 
 #include <iostream>
 #include <netinet/in.h>
@@ -86,15 +77,28 @@
 #include <random>
 #include "json.hpp"
 #include "url_parser.h"
-
+#include <set>
 
 #define STREAM_ID_INITIAL UINT64_MAX
+
+#define SERVER_PORT 9000
+
+#define SERVER_ADDRESS "100.64.0.1"
+#define SECOND_IFACE_IP "100.64.0.4"
+
+#define NUM_THREADS 10
 
 using namespace std;
 using namespace nlohmann;
 
 FILE *fp = NULL;
+int total_network_time = 0;
+int count_network_time = 0;
 
+int total_obj_download_time = 0;
+int count_obj_download_time = 0;
+
+FILE *client_msg_log_fp = NULL;
 
 /******************** emulated browser code ***************************/
 
@@ -114,32 +118,19 @@ mutex dnsMutex;
 mutex ongoingRequestMutex;
 
 map<string, json> activities; 
-map<string, vector<Activity>> affected_activities;
-map<string, vector<Activity>> dependency_list; 
-map<string, float> completed;
+
+map<string, int> dependency_degree_mp;
+map<string, vector<Activity>> dependency_graph_mp;
+
+set<string> completed;
 bool finished = false;
-int total_object = 7;
+
 int current_downloaded_object = 0;
 map<string, int> host_connection_map;
 int current_host_conn_id = 0;
 
-
-// Check whether all required activities has been fulfilled
-bool check_requirements(string activity_id, map<string, float> & completed, map<string, vector<Activity>> & dependency_list) {
-    bool result = true;
-    for (Activity activity : dependency_list[activity_id]) {
-        if (completed.find(activity.activity_id) != completed.end()) {
-            if (completed[activity.activity_id] < activity.duration) {
-                result = false;
-                break;
-            }
-        } else {
-            result = false;
-            break;
-        }
-    }
-    return result;
-}
+// Start time
+chrono::steady_clock::time_point browser_start_time;
 
 bool is_sane(const string & job_id, const json & entry) {
     bool result = true;
@@ -170,6 +161,11 @@ string get_url_path(URLParser::HTTP_URL & http_url) {
     string result = "thisisatesturl/"; 
     return result;
 }
+
+vector<thread> threadPool;
+vector<mutex> mutexes(NUM_THREADS);
+vector<condition_variable> cvs(NUM_THREADS);
+
 
 /*******************************************************************************************************/
 
@@ -238,9 +234,12 @@ typedef struct st_client_http_ctx_t
 
 typedef struct st_network_request {
     int file_size;
+    int priority;
+    string mimeType;
     string url;
     int cnx_id;
     string activity_id;
+    int thread_id;
     chrono::steady_clock::time_point put_to_queue_time;
     chrono::steady_clock::time_point send_time;
     chrono::steady_clock::time_point complete_time;
@@ -381,47 +380,37 @@ int picoquic_http_client_callback(picoquic_cnx_t* cnx,
                         float queue_time = -1;
                         string key = to_string(ctx->cnx_id) + ":" + to_string(stream_ctx->stream_id);
                         
-                        ongoingRequestMutex.lock();
                         auto it = ongoing_requests.find(key);
                         string activity_id = "";
+                        int thread_id = -1;
+                        int priority = -1;
+                        string mimeType = "";
                         if (it != ongoing_requests.end()) {
                             network_time = chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now() - ongoing_requests[key].send_time).count();
                             queue_time = chrono::duration_cast<std::chrono::milliseconds>(ongoing_requests[key].send_time - ongoing_requests[key].put_to_queue_time).count();
                             activity_id = ongoing_requests[key].activity_id;
-                            ongoing_requests.erase(it);
-                        }
-                        ongoingRequestMutex.unlock();
-                        char text[256];
-                        picoquic_cnx_id_to_string(text, cnx);
-                        printf("Conn %s, %s : Stream %d ended after %d bytes, network_time = %f ms, queue_time = %f ms\n", text, activity_id.c_str(), stream_id, stream_ctx->received_length, network_time, queue_time);
-                        if (fp != NULL) {
-                            fprintf(fp, "%s,%s,%d,%d,%f,%f\n", text, activity_id.c_str(), stream_id, stream_ctx->received_length, network_time, queue_time);
+                            thread_id = ongoing_requests[key].thread_id;
+                            priority = ongoing_requests[key].priority;
+                            mimeType = ongoing_requests[key].mimeType;
                         }
 
+                        assert(thread_id >= 0);
+
+                        printf("Conn %d, %s : Stream %d ended after %d bytes, network_time = %f ms, queue_time = %f ms\n", ctx->cnx_id, activity_id.c_str(), stream_id, stream_ctx->received_length, network_time, queue_time);
+                        if (fp != NULL) {
+                            fprintf(fp, "%d,%s,%d,%d,%s,%d,%f,%f\n", ctx->cnx_id, activity_id.c_str(), stream_id, stream_ctx->received_length, mimeType.c_str(), priority, network_time, queue_time);
+                        }
+                        
+                        total_network_time += network_time;
+                        count_network_time += 1;
+                        total_obj_download_time += (network_time + queue_time);
+                        count_obj_download_time += 1;
+                        
                         if (activity_id != "") {
-                            queueMutex.lock();
-                            current_downloaded_object += 1;
-                            completed[activity_id] = -1;
-                            // Push a new job
-                            for (int i=0; i<affected_activities[activity_id].size(); i++) {
-                                // Push a new job
-                                Activity activity = affected_activities[activity_id][i];
-                                if (check_requirements(activity.activity_id, completed, dependency_list)) {
-                                    Job job = {activity.activity_id};
-                                    jobQueue.emplace(job);
-                                    jobCondition.notify_one();
-                                }
+                            /*** Enter critical section ***/
+                            if (thread_id >= 0) {
+                                cvs[thread_id].notify_one(); // Wake the thread
                             }
-                            printf("Completed=%d, activities=%d, last_activities=%s\n", completed.size(), activities.size(), activity_id.c_str());
-                            if (completed.size() >= activities.size()) {
-                                finished = true;
-                                jobCondition.notify_all();
-                            }
-                            // if (current_downloaded_object >= total_object) {
-                            //     finished = true;
-                            //     jobCondition.notify_all();
-                            // }
-                            queueMutex.unlock();
                         } else {
                             printf("ERROR, activity id is not found!!!");
                             exit(0);
@@ -464,60 +453,12 @@ int picoquic_http_client_callback(picoquic_cnx_t* cnx,
             // Not yet implemented
             break;
         case picoquic_callback_almost_ready:
-        {
-            printf("Connection %d is almost ready!\n", ctx->cnx_id);
-            // if (ctx->connection_mp_probed != 1) {
-            //     // probe a new path (SAT)
-            //     struct sockaddr_storage addr_from;
-            //     int addr_from_is_name = 0;
-            //     struct sockaddr_storage addr_to;
-            //     int addr_to_is_name = 0;
-            //     int my_port = ntohs(((sockaddr_in *)&cnx->path[0]->local_addr)->sin_port);
-
-            //     picoquic_get_server_address("100.64.0.1", SERVER_PORT, &addr_from, &addr_from_is_name); // remote addr
-            //     picoquic_get_server_address("100.64.0.4", my_port, &addr_to, &addr_to_is_name);   // local addr
-
-            //     int ret_probe = picoquic_probe_new_path_ex(cnx, (struct sockaddr *)&addr_from, (struct sockaddr *)&addr_to, 0, picoquic_current_time(), 0);
-
-            //     if (ret_probe == 0) {
-            //         printf("Cnx %d : Probe successful\n", ctx->cnx_id);
-            //         ctx->connection_mp_probed = 1;
-            //     } else {
-            //         printf("!!! Cnx %d : Probe failed\n", ctx->cnx_id);
-            //     }
-            // }
-        }
         case picoquic_callback_ready:
         {
             // printf("Connection %d is ready!\n", ctx->cnx_id);
             ctx->connection_ready = 1;
-            // if (ctx->connection_mp_probed != 1) {
-            //     // probe a new path (SAT)
-            //     struct sockaddr_storage addr_from;
-            //     int addr_from_is_name = 0;
-            //     struct sockaddr_storage addr_to;
-            //     int addr_to_is_name = 0;
-            //     int my_port = ntohs(((sockaddr_in *)&cnx->path[0]->local_addr)->sin_port);
-
-            //     picoquic_get_server_address(SERVER_ADDR, SERVER_PORT, &addr_from, &addr_from_is_name); // remote addr
-            //     picoquic_get_server_address(IFACE2, my_port, &addr_to, &addr_to_is_name);   // local addr
-
-            //     int ret_probe = picoquic_probe_new_path_ex(cnx, (struct sockaddr *)&addr_from, (struct sockaddr *)&addr_to, 0, picoquic_current_time(), 0);
-
-            //     if (ret_probe == 0) {
-            //         printf("Cnx %d : Probe successful\n", ctx->cnx_id);
-            //         ctx->connection_mp_probed = 1;
-            //     } else {
-            //         printf("!!! Cnx %d : Probe failed\n", ctx->cnx_id);
-            //     }
-            // }
             break;
-        } 
-        case picoquic_callback_path_available:
-        {
-            ctx->connection_mp_ready = 1;
-            printf("Cnx %d : Second path is ready!!\n", ctx->cnx_id);
-        } 
+        }  
         case picoquic_callback_request_alpn_list:
             // printf("Set ALPN list\n");
             picoquic_client_set_alpn_list((void*)bytes);
@@ -562,7 +503,7 @@ int picoquic_http_client_callback(picoquic_cnx_t* cnx,
 // }
 
 int client_open_stream(picoquic_cnx_t*cnx, picoquic_http_client_callback_ctx* ctx,
-                        uint64_t stream_id, char const* doc_name) {
+                        uint64_t stream_id, char const* doc_name, int priority) {
     int ret = 0;
     uint8_t buffer[1024];
     size_t request_length = 0;
@@ -610,6 +551,7 @@ int client_open_stream(picoquic_cnx_t*cnx, picoquic_http_client_callback_ctx* ct
     assert(ret == 0);
     // Send the request
     ret = picoquic_add_to_stream_with_ctx2(cnx, stream_ctx->stream_id, buffer, request_length, 1, request_length, stream_ctx);
+    picoquic_set_stream_priority(cnx, stream_ctx->stream_id, priority);
 
     return ret;
 }
@@ -619,39 +561,42 @@ int send_requests_from_queue(quic_connection * quic_cnx) {
     int sent = 0;
     queue<network_request> *request_queue = quic_cnx->request_queue;
     picoquic_cnx_t* cnx = quic_cnx->cnx;
-    picoquic_http_client_callback_ctx * callback_ctx = quic_cnx->cnx_ctx;
 
     network_lock.lock();
     while(!request_queue->empty()) {
         network_request request = request_queue->front();
         // printf("Trying to send H3 request, cnx_id=%d, size=%d, url=%s, activity_id=%s, stream_id=%d!\n", quic_cnx->cnx_id, request.file_size, request.url.c_str(), request.activity_id.c_str(), quic_cnx->curr_stream_id);
         if (picoquic_get_cnx_state(cnx) == picoquic_state_ready ||
-            picoquic_get_cnx_state(cnx) == picoquic_state_client_ready_start &&  
-            callback_ctx->connection_mp_ready == 1) {
+            picoquic_get_cnx_state(cnx) == picoquic_state_client_ready_start ) {
             if (quic_cnx->h3_initialized == 0) {
                 h3zero_protocol_init(cnx);
                 quic_cnx->h3_initialized = 1;
             } 
             int stream_id = quic_cnx->curr_stream_id;
             // string doc_name = "/fszb-" + to_string(request.file_size); 
-            string doc_name = "/" + request.url + request_filesize_delimitter + to_string(request.file_size); 
+            string doc_name = "/" + request.url + request_filesize_delimitter + to_string(request.file_size) + "-" + to_string(request.priority);
             string fname = "_" + to_string(request.file_size);
+            client_open_stream(cnx, quic_cnx->cnx_ctx, stream_id, doc_name.c_str(), request.priority);
+            request.send_time = chrono::steady_clock::now();
             // Put to ongoing
             string key = to_string(quic_cnx->cnx_id) + ":" + to_string(stream_id);
+
+            if (client_msg_log_fp != NULL) {
+                std::chrono::duration<double> start_time = request.send_time - browser_start_time;
+                fprintf(client_msg_log_fp, "%f,%d,%d,%d\n", start_time.count(), request.file_size, request.cnx_id, stream_id);
+            }
             
             ongoingRequestMutex.lock();
-            request.send_time = chrono::steady_clock::now();
             ongoing_requests[key] = request;
             ongoingRequestMutex.unlock();
             
             quic_cnx->curr_stream_id += 4;
             sent += 1;
             // float queue_time = chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now() - request.put_to_queue_time).count();
-            client_open_stream(cnx, quic_cnx->cnx_ctx, stream_id, doc_name.c_str());
             // printf("Request sent, queue_time=%f ms\n", queue_time);
             request_queue->pop();
         } else {
-            printf("Picoquic connection is not ready to send yet!, still in stat=%d, mp_probed=%d\n", picoquic_get_cnx_state(cnx), callback_ctx->connection_mp_ready);
+            // printf("Picoquic connection is not ready to send yet!, still in stat=%d\n", picoquic_get_cnx_state(cnx));
             break;
         }
     }
@@ -729,15 +674,13 @@ int picoquic_client_sending_loop_callback(picoquic_quic_t* quic, picoquic_packet
                 if (quic_cnx->established == 0) {
                     if (picoquic_get_cnx_state(cnx) == picoquic_state_ready ||
                     picoquic_get_cnx_state(cnx) == picoquic_state_client_ready_start) {
-                        if (quic_cnx->cnx_ctx->connection_mp_ready == 1) {
-                            printf("Connection fully established. Version = %x, I-CID: %llx, verified: %d\n",
-                                picoquic_supported_versions[cnx->version_index].version,
-                                (unsigned long long)picoquic_val64_connection_id(picoquic_get_logging_cnxid(cnx)),
-                                cnx->is_hcid_verified);
-                            quic_cnx->established = 1;
-                            if (!quic_cnx->request_queue->empty()) {
-                                send_requests_from_queue(quic_cnx);
-                            }
+                        printf("Connection established. Version = %x, I-CID: %llx, verified: %d\n",
+                            picoquic_supported_versions[cnx->version_index].version,
+                            (unsigned long long)picoquic_val64_connection_id(picoquic_get_logging_cnxid(cnx)),
+                            cnx->is_hcid_verified);
+                        quic_cnx->established = 1;
+                        if (!quic_cnx->request_queue->empty()) {
+                            send_requests_from_queue(quic_cnx);
                         }
                     }
                 }
@@ -947,7 +890,7 @@ int initialize_http3_client(char* server_name, int server_port) {
     return ret;
 }
 
-int add_request_to_client(int filesize, string url, int cnx_id, string activity_id) {
+int add_request_to_client(int filesize, int priority, string mimeType, string url, int cnx_id, string activity_id, int thread_id) {
     int ret = 0;
     bool found = false;
     
@@ -956,17 +899,19 @@ int add_request_to_client(int filesize, string url, int cnx_id, string activity_
     for (int i=0; i<quic_cnxs.size(); i++) {
         if (quic_cnxs[i]->cnx_id == cnx_id) {
             found = true;
-            quic_cnxs[i]->request_queue->push({filesize, url, cnx_id, activity_id, chrono::steady_clock::now()});
+            quic_cnxs[i]->request_queue->push({filesize, priority, mimeType, url, cnx_id, activity_id, thread_id, chrono::steady_clock::now()});
         }
     } 
     
     if (!found) {
         quic_connection * quic_cnx = create_and_start_quic_connections(qclient, &server_addr, &config, quic_cnxs.size());
-        quic_cnx->request_queue->push({filesize, url, cnx_id, activity_id, chrono::steady_clock::now()});
+        quic_cnx->request_queue->push({filesize, priority, mimeType, url, cnx_id, activity_id, thread_id, chrono::steady_clock::now()});
         quic_cnxs.push_back(quic_cnx);
     }
 
     network_lock.unlock();
+
+    printf("network_unlocked\n");
 
     picoquic_wake_up_network_thread(net_thread_ctx); 
 
@@ -999,10 +944,11 @@ int get_connection_id(string host) {
 /************* Browser thread *******************/
 
 // Shared variables: activities, completed, dependency_list, affected_activities, finished
-void browser(int thread_id) {
+void browser(int thread_id, set<string> cp) {
     int count = 0;
     Job job;
     bool acquired = false;
+    bool newJobAvailable = false;
     printf("Start browser, thread_id=%d\n", thread_id);
     while (true) {
         acquired = false;
@@ -1010,6 +956,7 @@ void browser(int thread_id) {
         jobCondition.wait(lock, []{ return !jobQueue.empty() || finished; });
         // printf("Thread %d: free from waiting\n", thread_id);
         if (finished) {
+            lock.unlock();
             break;
         }
         if (!jobQueue.empty()) {
@@ -1021,8 +968,9 @@ void browser(int thread_id) {
         }
         // printf("%d: Start processing job=%s\n", thread_id, job.id.c_str());
         lock.unlock();
+
         if (acquired) {
-            assert(activities.find(job.id) != activities.end());
+            /*** Process the job ***/
             if (is_sane(job.id, activities[job.id])) {
                 if (job.id.find("Networking") != string::npos) {
                     // Process network
@@ -1031,60 +979,78 @@ void browser(int thread_id) {
                     float start_time = activities[job.id]["startTime"];
                     float end_time = activities[job.id]["endTime"];
                     float duration = end_time - start_time;
+                    duration = duration / 2;
                     // Download files
                     printf("%d: %s, download url=%s, size=%d bytes, start=%f, end=%f, duration =%.f\n", thread_id, job.id.c_str(), url.c_str(), size_bytes, start_time, end_time, duration);
                     URLParser::HTTP_URL http_url = URLParser::Parse(url);
-                    // int conn_id = get_connection_id(http_url.host);
-                    int conn_id = 0;
+                    int conn_id = get_connection_id(http_url.host);
+                    // int conn_id = 0;
+                    
                     string path = get_url_path(http_url);
-                    // printf("Host: %s, Path = %s\n", http_url.host.c_str(), path.c_str());
-                    add_request_to_client(size_bytes, path, conn_id, job.id);
+                    printf("Thread_id=%d, Host: %s, Path = %s\n", thread_id, http_url.host.c_str(), path.c_str());
+                    string mimeType = activities[job.id]["mimeType"];
+                    int priority = 10;
+
+                    if (cp.find(job.id) != cp.end()) {
+                        priority = 1;
+                    }
+
+                    // if (size_bytes <= 5000)  {
+                    //     priority = 1;
+                    // } else {
+                    //     priority = 10;
+                    // }
+
+                    // if (mimeType.find("javascript") != string::npos) {
+                    //     priority = 2;
+                    // } else if (mimeType.find("html") != string::npos) {
+                    //     priority = 1;
+                    // } else {
+                    //     priority = 10;
+                    // }
+
+                    unique_lock<mutex> lock(mutexes[thread_id]);
+                    add_request_to_client(size_bytes, priority, mimeType, path, conn_id, job.id, thread_id);
+
+                    cvs[thread_id].wait(lock);
+                    lock.unlock();
+
                 } else if (job.id.find("Loading") != string::npos || job.id.find("Scripting") != string::npos) {
                     float start_time = activities[job.id]["startTime"];
                     float end_time = activities[job.id]["endTime"];
                     float duration = end_time - start_time;
                     printf("%d: %s started, total sleep_duration=%f\n", thread_id, job.id.c_str(), duration);
                     std::this_thread::sleep_for(chrono::milliseconds((int) duration));
-                    queueMutex.lock();
-                    completed[job.id] = -1;
-                    // Push a new job
-                    for (int i=0; i<affected_activities[job.id].size(); i++) {
-                        // Push a new job
-                        Activity activity = affected_activities[job.id][i];
-                        if (check_requirements(activity.activity_id, completed, dependency_list)) {
-                            Job job = {activity.activity_id};
-                            jobQueue.emplace(job);
-                            jobCondition.notify_one();
-                        }
-                    }
-                    printf("Completed=%d, activities=%d, last_activities=%s, job_queue_size=%d\n", completed.size(), activities.size(), job.id.c_str(), jobQueue.size());
-                    if (completed.size() >= activities.size()) {
-                        finished = true;
-                        jobCondition.notify_all();
-                    }
-                    queueMutex.unlock();
                 }
             } else {
-                printf("Job %s is missing json key, skip it!!\n", job.id.c_str());
-                queueMutex.lock();
-                completed[job.id] = -1;
-                // Push a new job
-                for (int i=0; i<affected_activities[job.id].size(); i++) {
-                    // Push a new job
-                    Activity activity = affected_activities[job.id][i];
-                    if (check_requirements(activity.activity_id, completed, dependency_list)) {
-                        Job job = {activity.activity_id};
-                        jobQueue.emplace(job);
-                        jobCondition.notify_one();
-                    }
-                }
-                printf("Completed=%d, activities=%d, last_activities=%s\n", completed.size(), activities.size(), job.id.c_str());
-                if (completed.size() >= activities.size()) {
-                    finished = true;
-                    jobCondition.notify_all();
-                }
-                queueMutex.unlock();
+                printf("!!! Job %s is missing json key, skip it!!\n", job.id.c_str());
             }
+
+            /*** Enter critical section ***/
+            queueMutex.lock();
+            completed.emplace(job.id);
+            // Reduce dependency degree and push new job (if any)
+            newJobAvailable = false;
+            for (auto const & node : dependency_graph_mp[job.id]) {
+                assert(dependency_degree_mp[node.activity_id] > 0);
+                dependency_degree_mp[node.activity_id] -= 1;
+                if (dependency_degree_mp[node.activity_id] == 0) {
+                    Job temp = {node.activity_id};
+                    jobQueue.emplace(temp);
+                    newJobAvailable = true;
+                }
+            }
+            // Check whether all jobs are completed
+            if (completed.size() >= activities.size()) {
+                finished = true;
+            }
+            queueMutex.unlock();
+            /*** Critical section ends */
+
+            if (newJobAvailable || finished) {
+                jobCondition.notify_all();
+            }
+
         }
     }
 }
@@ -1095,31 +1061,49 @@ void browser(int thread_id) {
 
 int main(int argc, char *argv[]) {
     
-    char* server_addr = SERVER_ADDRESS;
-    int server_port = SERVER_PORT;
-
-    fp = fopen( NET_LOG_PATH, "w" );
-    if (fp != NULL) {
-        fprintf(fp, "%s,%s,%s,%s,%s,%s\n", "cnx_id", "activity_id", "stream_id", "data_size", "transfer_time", "queue_time");
-    }
-    
+    char* server_addr = "100.64.0.1";
+    int server_port = 9000;
 
     initialize_http3_client(server_addr, server_port);
-
-    if (ENABLE_PICOQUIC_MP_SCHEDULING) {
-        picoquic_enable_mp_scheduling();
-    }
-
-    char* packet_log = "/home/william/picoquic-log/client-packet.txt";
-    picoquic_set_packet_log(packet_log);
 
     string dep_fpath;
     if(argc > 1) {
         dep_fpath = string(argv[1]);
     } else {
-        // dep_fpath = "web_browsing/0_www.wikipedia.org.json";
-        dep_fpath = "web_browsing/0_www.cnn.com.json";
+        dep_fpath = "web_browsing/dep_graphs/0_www.glassdoor.com.json";
     }
+
+    int picoquic_mp_scheduling_mode = 0;
+    if (argc > 2) {
+        picoquic_mp_scheduling_mode = stoi(argv[2]);
+    }
+
+    if (argc > 3) {
+        fp = fopen( argv[3], "w");
+        if (fp != NULL) {
+            fprintf(fp, "%s,%s,%s,%s,%s,%s,%s\n", "cnx_id", "activity_id", "stream_id", "data_size", "mimeType", "priority", "transfer_time", "queue_time");
+        }
+    }
+
+    if (argc > 4) {
+        client_msg_log_fp = fopen( argv[4], "w" );
+        if (client_msg_log_fp != NULL) {
+            fprintf(client_msg_log_fp, "%s,%s,%s,%s\n", "arrival_time_s", "msg_size_byte", "cnx_id", "msg_id");
+        }
+    }
+
+    if (picoquic_mp_scheduling_mode) {
+        picoquic_enable_mp_scheduling(picoquic_mp_scheduling_mode);
+        // Set steering parameter
+        qclient->llc_usage = 0;
+        qclient->llc_bandwidth_mbps = 2;
+        qclient->llc_owd = 2.5;
+        qclient->hb_owd = 30;
+        qclient->alpha = 1;
+    }
+
+    char* packet_log = "/home/william/picoquic-log/client-packet.txt";
+    picoquic_set_packet_log(packet_log);
 
     json loading_logs;
     ifstream file(dep_fpath);
@@ -1138,8 +1122,6 @@ int main(int argc, char *argv[]) {
     json rendering;
     json netlog;
     json critical_path;
-
-    // map<string, json> activities;
     
     // Parse the logs
     for (json entry : loading_logs) {
@@ -1187,44 +1169,41 @@ int main(int argc, char *argv[]) {
             duration = -1;
         }
         
-        if (affected_activities.find(a1) != affected_activities.end()) {
-            Activity temp;
-            temp.activity_id = a2;
-            temp.duration = duration;
-            affected_activities[a1].push_back(temp);
-        } else {
+        // Add to dep graph
+        if (dependency_graph_mp.find(a1) == dependency_graph_mp.end()) {
             vector<Activity> temp_v;
-            Activity temp;
-            temp.activity_id = a2;
-            temp.duration = duration;
-            temp_v.push_back(temp);
-            affected_activities[a1] = temp_v;
+            dependency_graph_mp[a1] = temp_v;
+        } 
+        Activity temp;
+        temp.activity_id = a2;
+        temp.duration = duration;
+        dependency_graph_mp[a1].push_back(temp);
+        
+        // Increase the dep degree
+        if (dependency_degree_mp.find(a2) == dependency_degree_mp.end()) {
+            dependency_degree_mp[a2] = 0;
         }
-        if (dependency_list.find(a2) != dependency_list.end()) {
-            Activity temp;
-            temp.activity_id = a1;
-            temp.duration = duration;
-            dependency_list[a2].push_back(temp);
-        } else {
-            vector<Activity> temp_v;
-            Activity temp;
-            temp.activity_id = a1;
-            temp.duration = duration;
-            temp_v.push_back(temp);
-            dependency_list[a2] = temp_v;
-        }
+        dependency_degree_mp[a2] += 1;
     }
 
+    set<string> cp = {"Networking_0", "Networking_50"};
+
     printf("*** Start browsing ***\n");
-    Job job = {"Networking_0"};
-    jobQueue.emplace(job);
-    auto now = chrono::steady_clock::now();
+
+    // Populate the first job (activity with zero dependency degree)
+    for (auto const& activity : activities) {
+        if (dependency_degree_mp.find(activity.first) == dependency_degree_mp.end()) {
+            Job job = {activity.first};
+            jobQueue.emplace(job);
+        }
+    }    
         
-    int numThreads = 5;
+    auto now = chrono::steady_clock::now();
+    browser_start_time = now;
+    
     // Create and start the thread pool
-    vector<thread> threadPool;
-    for (int i = 0; i < numThreads; ++i) {
-        threadPool.emplace_back(browser, i);
+    for (int i = 0; i < NUM_THREADS; ++i) {
+        threadPool.emplace_back(browser, i, cp);
     }
 
 
@@ -1235,7 +1214,8 @@ int main(int argc, char *argv[]) {
 
     float duration_ms = chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now() - now).count();
     printf("All jobs processed, duration=%f ms\n", duration_ms);
-
+    printf("Network time: avg=%.2f, num=%d\n", (total_network_time / (float) count_network_time), count_network_time);
+    printf("Download time: avg=%.2f, num=%d\n", (total_obj_download_time / (float) count_obj_download_time), count_obj_download_time);
 
     return 0;
 }
