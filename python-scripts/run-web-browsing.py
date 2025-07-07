@@ -4,8 +4,8 @@ import time
 import pexpect
 
 # Constant
-HOME_FOLDER = "/home/william/"
-BASE_FOLDER =  HOME_FOLDER + "picoquic-project/picoquic/"
+HOME_FOLDER = "/home/milind/"
+BASE_FOLDER =  HOME_FOLDER + "Milind/picoquic_setup/picoquic/"
 
 # NOTES: If you want to generate new key, use this command
 # openssl req -nodes -x509 -newkey rsa:2048 -days 365 -keyout ca-key.pem -out ca-cert.pem
@@ -16,13 +16,13 @@ CA_KEY_FOLDER = BASE_FOLDER + "web_browsing/"
 SERVER_KEY = CA_KEY_FOLDER + "server-key.pem"
 SERVER_CERT = CA_KEY_FOLDER + "ca-cert.pem"
 
-SERVER_WEB_FOLDER = HOME_FOLDER + "webtest"
+SERVER_WEB_FOLDER = HOME_FOLDER +  "Milind/picoquic_setup/webtest"
 PASSWORD = "1234"
 
 ### Network emulation config
 SERVER_PORT = 9000
 
-NETWORK_TRACE_FOLDER = HOME_FOLDER + "/adv-mahimahi/multipath-network-emulator/traces/"
+NETWORK_TRACE_FOLDER = HOME_FOLDER + "Milind/picoquic_setup/multipath-network-emulator/traces/"
 WEB_BROWSING_BASE_FOLDER = BASE_FOLDER + "web_browsing/dep_graphs/"
 
 def run_picoquic_server(mp_option):
@@ -48,11 +48,11 @@ def get_mm_multipath_cmd():
 
     path_1_latency_trace = NETWORK_TRACE_FOLDER + "delay-traces/" + "latency-60ms-rtt"
     path_1_bw_trace = NETWORK_TRACE_FOLDER + "bandwidth-traces/" + "180Mbps"
-    path_1_packet_log_folder = HOME_FOLDER + "/test-1" # Make sure that this folder exist
+    path_1_packet_log_folder = HOME_FOLDER + "Milind/picoquic_setup/multipath-network-emulator/logs/log1" # Make sure that this folder exist
 
     path_2_latency_trace = NETWORK_TRACE_FOLDER + "delay-traces/" + "latency-4ms-rtt"
     path_2_bw_trace = NETWORK_TRACE_FOLDER + "bandwidth-traces/" + "2Mbps"
-    path_2_packet_log_folder = HOME_FOLDER + "/test-2" # Make sure that this folder exist
+    path_2_packet_log_folder = HOME_FOLDER + "Milind/picoquic_setup/multipath-network-emulator/logs/log2" # Make sure that this folder exist
 
     total_num_args = 1
 
