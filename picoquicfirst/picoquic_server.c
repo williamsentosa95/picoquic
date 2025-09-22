@@ -63,10 +63,10 @@ static const char* token_store_filename = "demo_token_store.bin";
 
 #define PICOQUIC_MP_SCHEDULING_MODE 1
 #define ENABLE_PACKET_LOGGING 1
-#define PACKET_LOG_PATH "/home/william/picoquic-log/server-packet.txt"
+#define PACKET_LOG_PATH "/home/milind/Milind/picoquic_setup/picoquic-log/server_packet.txt"
 
 #define ENABLE_MSG_LOGGING 1
-#define MSG_LOG_PATH "/home/william/picoquic-log/msg-log-server.csv"
+#define MSG_LOG_PATH "/home/milind/Milind/picoquic_setup/picoquic-log/msg-log-server.csv"
 
 #include "picoquic.h"
 #include "picoquic_packet_loop.h"

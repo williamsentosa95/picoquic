@@ -699,6 +699,10 @@ int initialize_http3_client(char* server_name, int server_port) {
     memcpy(option_string, "A:u:f:1", 7);
     ret = picoquic_config_option_letters(option_string + 7, sizeof(option_string) - 7, NULL);
 
+    // print ret
+    printf("option string: %s\n", option_string);
+    printf("ret = %d\n", ret);
+
     if (ret == 0) {
         /* Get the parameters */
         while ((opt = getopt(temp_argc, temp_argv, option_string)) != -1) {
@@ -759,6 +763,7 @@ int initialize_http3_client(char* server_name, int server_port) {
     printf("Initializing Picoquic (v%s) connection to server = %s, port = %s\n", PICOQUIC_VERSION, server_name, port);
 
     const char * sni = config.sni;
+    printf("SNI: %s\n", sni ? sni : "NULL");
     uint64_t current_time = 0;
     int is_name = 0;
     ret = picoquic_get_server_address(server_name, server_port, &server_addr, &is_name);    
@@ -815,12 +820,14 @@ int add_request_to_client(int filesize, int priority, string url, int cnx_id) {
 
     for (int i=0; i<quic_cnxs.size(); i++) {
         if (quic_cnxs[i]->cnx_id == cnx_id) {
+            printf("Milind : Adding requests to existing connection for cnx_id=%d\n", cnx_id);
             found = true;
             quic_cnxs[i]->request_queue->push({filesize, priority, url, cnx_id, chrono::steady_clock::now()});
         }
     } 
     
     if (!found) {
+        printf("Milind : Creating new connection for cnx_id=%d\n", cnx_id);
         quic_connection * quic_cnx = create_and_start_quic_connections(qclient, &server_addr, &config, cnx_id);
         quic_cnx->request_queue->push({filesize, priority, url, cnx_id, chrono::steady_clock::now()});
         quic_cnxs.push_back(quic_cnx);
@@ -949,9 +956,12 @@ int main(int argc, char *argv[]) {
         qclient->hb_owd = 30;
         qclient->alpha = 0.75;
     }
-
-    char* packet_log = "/home/william/picoquic-log/client-packet.txt";
+    
+    // TODO: Change the path
+    char* packet_log = "/home/milind/Milind/picoquic_setup/picoquic-log/client-packet.txt";
+    printf("Before the packet log\n");
     picoquic_set_packet_log(packet_log);
+    printf("After the packet log\n");
 
     int curr_time = 0;
     for (int i=0; i<msg_arrivals.size(); i++) {
@@ -963,6 +973,7 @@ int main(int argc, char *argv[]) {
         int sleep_time = int(arrival) - curr_time;
         curr_time = arrival;
         usleep(sleep_time);
+        printf("Milind: Added request to the client");
         add_request_to_client(msg_size, priority, "hello", conn_id);
     }
 
