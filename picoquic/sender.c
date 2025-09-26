@@ -283,6 +283,8 @@ int picoquic_add_to_stream_with_ctx2(picoquic_cnx_t* cnx, uint64_t stream_id,
     picoquic_stream_head_t* stream = picoquic_find_stream_for_writing(cnx, stream_id, &ret);
     if (stream != NULL) {
         stream->current_total_length = data_size;
+        printf("Milind: Setting current_total_length to %d for stream ID: %" PRIu64 "\n",
+             data_size, stream_id);
     }
 
     if (ret == 0 && set_fin) {
@@ -6018,6 +6020,7 @@ static int picoquic_select_next_path2(picoquic_cnx_t * cnx, uint64_t current_tim
     int path_id = -1;
 
     if ((cnx->is_multipath_enabled || cnx->is_simple_multipath_enabled || cnx->is_unique_path_id_enabled) && cnx->cnx_state >= picoquic_state_ready) {
+        printf("Milind: Calling picoquic_select_next_path_mp2\n");
         return picoquic_select_next_path_mp2(cnx, current_time, next_wake_time, p_addr_to, p_addr_from, if_index, status);
     }
 
@@ -6124,8 +6127,10 @@ int picoquic_prepare_packet_ex(picoquic_cnx_t* cnx,
 
         /* Select the next path, and the corresponding addresses */
         if (mp_scheduling_mode) {
+            printf("Milind: Calling picoquic_select_next_path2\n");
             path_id = picoquic_select_next_path2(cnx, current_time, &next_wake_time, p_addr_to, p_addr_from, if_index, &status);
         } else {
+            printf("Milind: Calling picoquic_select_next_path no 2\n");
             path_id = picoquic_select_next_path(cnx, current_time, &next_wake_time, p_addr_to, p_addr_from, if_index);
         }
 
@@ -6394,6 +6399,7 @@ int picoquic_prepare_next_packet_ex(picoquic_quic_t* quic,
             *send_length = 0;
         }
         else {
+            printf("Milind: Call picoquic_prepare_packet_ex for cnx=%p\n", cnx);
             ret = picoquic_prepare_packet_ex(cnx, current_time, send_buffer, send_buffer_max, send_length, p_addr_to, p_addr_from, 
                 if_index, send_msg_size);
             // printf("Prepare packet ex, send_length=%d\n", send_length);
@@ -6454,11 +6460,14 @@ void picoquic_enable_mp_scheduling(int scheduling_mode) {
 }
 
 int picoquic_set_packet_log(char* log_fpath) {
+    printf("In picoquic_set_packet_log\n");
     packet_log_path = log_fpath;
     packet_log = fopen(log_fpath, "w");
     if (packet_log == NULL) {
+        printf("Failed to open packet log file: %s\n", log_fpath);
         return -1;
     }
+    printf("Packet log file opened successfully: %s\n", log_fpath);
     return 0;
 }
 

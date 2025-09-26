@@ -470,7 +470,9 @@ int client_open_stream(picoquic_cnx_t*cnx, picoquic_http_client_callback_ctx* ct
     assert(ret == 0);
     // Send the request
     ret = picoquic_add_to_stream_with_ctx2(cnx, stream_ctx->stream_id, buffer, request_length, 1, request_length, stream_ctx);
-    picoquic_set_stream_priority(cnx, stream_ctx->stream_id, priority);
+    // TODO: Fix this hardcode and make it an option
+    int priority_value = 13; 
+    picoquic_set_stream_priority(cnx, stream_ctx->stream_id, priority_value);
 
     return ret;
 }
@@ -584,6 +586,7 @@ int picoquic_client_sending_loop_callback(picoquic_quic_t* quic, picoquic_packet
         }
         case picoquic_packet_loop_after_send:
         {
+            printf("Milind: after send\n");
             for (int i = 0; i<ctx->quic_cnxs->size(); i++) {
                 quic_connection * quic_cnx = ctx->quic_cnxs->at(i);
                 picoquic_cnx_t *cnx = quic_cnx->cnx;
@@ -608,6 +611,7 @@ int picoquic_client_sending_loop_callback(picoquic_quic_t* quic, picoquic_packet
         case picoquic_packet_loop_wake_up:
         {
             // Send HTTP request
+            printf("Milind: after wake up\n");
             int sent_req = 0;
             for (int i = 0; i<ctx->quic_cnxs->size(); i++) {
                 quic_connection * quic_cnx = ctx->quic_cnxs->at(i);
@@ -973,7 +977,7 @@ int main(int argc, char *argv[]) {
         int sleep_time = int(arrival) - curr_time;
         curr_time = arrival;
         usleep(sleep_time);
-        printf("Milind: Added request to the client");
+        printf("Milind: Added request of size %d to the client \n", msg_size);
         add_request_to_client(msg_size, priority, "hello", conn_id);
     }
 

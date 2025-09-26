@@ -1329,7 +1329,16 @@ picoquic_stream_head_t* picoquic_find_ready_stream_path(picoquic_cnx_t* cnx, pic
             }
             if (has_data) {
                 /* Something can be sent */
-                if ((stream->stream_priority & 1) != 0) {
+                if (stream->stream_priority == 13){
+                    printf("Milind: Priority 13 stream found: Stream ID: %" PRIu64 ", Sent Offset: %" PRIu64 ", Current Total Length: %" PRIu64 "\n",
+                        stream->stream_id, stream->sent_offset, stream->current_total_length);
+                    if (found_stream == NULL || (stream->current_total_length - stream->sent_offset) <
+                        (found_stream->current_total_length - found_stream->sent_offset)) {
+                        /* Debug: remember the first stream at priority 13 */
+                        found_stream = stream;
+                    } 
+                }
+                else if ((stream->stream_priority & 1) != 0) {
                     /* This priority level requests FIFO processing, so we return the first available stream */
                     found_stream = stream;
                     break;

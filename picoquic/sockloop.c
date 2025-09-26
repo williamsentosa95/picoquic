@@ -856,7 +856,8 @@ void* picoquic_packet_loop_v3(void* v_ctx)
                 int if_index = param->dest_if;
                 int sock_ret = 0;
                 int sock_err = 0;
-
+                
+                printf("Milind: picoquic_prepare_next_packet_ex \n");
                 ret = picoquic_prepare_next_packet_ex(quic, loop_time,
                     send_buffer, send_buffer_size, &send_length,
                     &peer_addr, &local_addr, &if_index, &log_cid, &last_cnx,
@@ -1177,6 +1178,7 @@ int picoquic_wake_up_network_thread(picoquic_network_thread_ctx_t* thread_ctx)
         if ((written = write(thread_ctx->wake_up_pipe_fd[1], &ret, 1)) != 1) {
             if (written == 0) {
                 ret = EPIPE;
+                printf("Milind: wrote to the pipe for wake up returned 0\n");
             }
             else {
                 ret = errno;
