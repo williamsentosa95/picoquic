@@ -5,7 +5,7 @@
 #include <chrono>
 #include <fstream>
 
-std::string msg(1000000000, 'a');
+std::string msg(2000000000, 'a');
 
 // typedef struct st_server_app_ctx_t
 // {
@@ -29,8 +29,8 @@ int main(int argc, char **argv)
 
   int ret = 0;
   int server_port = 12000;
-  const char *server_cert = "./toy_app/ca-cert.pem";
-  const char *server_key = "./toy_app/server-key.pem";
+  const char *server_cert = "./web_browsing/ca-cert.pem";
+  const char *server_key = "./web_browsing/server-key.pem";
   char *default_alpn = "my_custom_alpn";
   // char *default_alpn = "application layer protocol";
   uint64_t current_time = picoquic_current_time();
