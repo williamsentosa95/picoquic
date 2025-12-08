@@ -35,13 +35,14 @@ int main(int argc, char *argv[])
 {
   std::cout << "Client started" << std::endl;
 
-  if(argc != 4) {
-    std::cout << "Usage: ./client_toy <total_requests> <bytes_requested> <output_file>" << std::endl;
+  if(argc != 5) {
+    std::cout << "Usage: ./client_toy <server_ip> <total_requests> <bytes_requested> <output_file>" << std::endl;
     return -1;
   }
 
   int ret = 0;
-  char *server_name = "100.64.0.1";
+  // char *server_name = "100.64.0.1";
+  char *server_name = argv[1];
   int server_port = 12000;
   picoquic_quic_t *quic = NULL;
   picoquic_cnx_t *cnx = NULL;
@@ -96,10 +97,10 @@ int main(int argc, char *argv[])
   // char message[] = "10000";
 
   client_app_ctx_t *client_ctx = new client_app_ctx_t();
-  client_ctx->total_requests = atoi(argv[1]);
+  client_ctx->total_requests = atoi(argv[2]);
   // std::cout << "Total requests: " << client_ctx->total_requests << std::endl;
   client_ctx->requests_sent = 0;
-  client_ctx->bytes_requested = strtol(argv[2], NULL, 10);
+  client_ctx->bytes_requested = strtol(argv[3], NULL, 10);
   std::cout << "Bytes requested: " << client_ctx->bytes_requested << std::endl;
   client_ctx->request_msg = std::to_string(client_ctx->bytes_requested);
   client_ctx->total_bytes_received = 0;
@@ -107,7 +108,7 @@ int main(int argc, char *argv[])
   // client_ctx->time_taken = new int[client_ctx->total_requests];
   client_ctx->start_times = new long[client_ctx->total_requests];
   client_ctx->end_times = new long[client_ctx->total_requests];
-  client_ctx->output_file = std::string(argv[3]);
+  client_ctx->output_file = std::string(argv[4]);
   client_ctx->cnx_id = 1;
 
   printf("Starting connection to %s, port %d\n", server_name, server_port);
@@ -211,10 +212,8 @@ int sample_client_callback(picoquic_cnx_t *cnx,
         client_ctx->start_times[req_id] = client_ctx->start_timestamp.time_since_epoch().count();
         client_ctx->end_times[req_id] = client_ctx->end_timestamp.time_since_epoch().count();
         float duration = (client_ctx->end_times[req_id] - client_ctx->start_times[req_id]) / 1e6;
-        std::cout << client_ctx->cnx_id << " : ID " << req_id << "received = " << client_ctx->current_request_bytes_received << ", duration = " << duration << " ms" << std::endl;
+        std::cout << client_ctx->cnx_id << " : Req ID " << req_id << ", received = " << client_ctx->current_request_bytes_received << " bytes, duration = " << duration << " ms" << std::endl;
         client_ctx->current_request_bytes_received = 0;
-
-        
 
         if (client_ctx->requests_sent < client_ctx->total_requests)
         {
